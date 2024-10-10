@@ -107,15 +107,6 @@ def load_user(user_id):
     return User(user['id'], user['username'], user['password'], user['role']) if user else None
 
 
-# 사용자 클래스
-class User(UserMixin):
-    def __init__(self, id, username, password, role):
-        self.id = id
-        self.username = username
-        self.password = password
-        self.role = role
-
-
 # 로그인 페이지
 # 로그인 페이지
 # @app.route('/login', methods=['GET', 'POST'])
@@ -570,7 +561,7 @@ def click_more_button(driver, selector):
 
 # 순차적으로 크롤링 및 DB 업데이트 함수
 def start_crawling_and_update_db():
-    conn = get_db_connection()
+    conn = get_db_connection()  # DB 연결
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM keywords WHERE id IS NOT NULL")
     rows = cursor.fetchall()
@@ -578,8 +569,9 @@ def start_crawling_and_update_db():
     try:
         for row in rows:
             try:
-                # 반환값을 5개로 받도록 수정
+                # 반환값을 5개로 받도록 수정 (rank, category, blog_review, visitor_review, index)
                 rank, category, blog_review, visitor_review, index = find_rank_and_reviews(row['id'], row['키워드'], row['플레이스번호'])
+
                 if rank is not None:
                     # 데이터 재조회
                     cursor.execute("SELECT * FROM keywords WHERE id = %s", (index,))
@@ -598,14 +590,14 @@ def start_crawling_and_update_db():
                         최고순위 = rank
 
                     # 변동이력 계산 (정수 값으로 계산)
-                    이전순위 = int(row['현재순위']) if row['현재순위'] is not None and row['현재순위'] != '' else rank
-                    변동이력 = rank - 이전순위
-                    변동이력_str = f"+{변동이력}" if 변동이력 > 0 else f"{변동이력}"
+                    최초순위 = int(row['최초순위']) if row['최초순위'] is not None and row['최초순위'] != '' else 0
+                    변동이력 = 최초순위 - rank  # 최초순위와 현재 순위 비교
+                    변동이력_str = f"{변동이력}" if 변동이력 != 0 else "0"  # 변동이 0일 경우도 처리
 
-                    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+                    now = datetime.now().strftime('%Y-%m-%d %H:%M')  # 현재 시간
 
                     # DB 업데이트
-                    cursor.execute(""" 
+                    cursor.execute("""
                         UPDATE keywords 
                         SET 최고순위 = %s, 현재순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
                         WHERE id = %s
@@ -672,59 +664,69 @@ schedule_crawling_task(1, 0)
 def fetch():
     data = request.get_json()
 
-    if 'index' not in data:
+    # 'index' 값이 없는 경우 처리
+    if 'index' not in data or not data['index']:
         return jsonify({'error': 'No index provided'}), 400
 
-    index = int(data['index'])
-    keyword = data['keyword']
-    place_id = data['place_id']
-    place_name = data.get('place_name')  # place_name 추가
+    try:
+        # 'index' 값을 정수로 변환
+        index = int(data['index'])
+    except ValueError:
+        return jsonify({'error': 'Invalid index value'}), 400
 
-    # MySQL 연결 및 데이터 조회
+    # 나머지 입력 값 추출
+    keyword = data.get('keyword')
+    place_id = data.get('place_id')
+    place_name = data.get('place_name')
+
+    # MySQL 연결
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # index 값을 통해 데이터베이스에서 데이터 조회
+        # 데이터베이스에서 해당 'index' 값으로 검색
         cursor.execute("SELECT * FROM keywords WHERE id = %s", (index,))
         row = cursor.fetchone()
 
+        # 해당 'index' 값이 없을 때
         if row is None:
-            return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404  # 순위를 찾을 수 없을 때 반환
+            return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404
 
-        # 순위와 리뷰를 가져오는 함수 호출
+        # 순위, 카테고리, 리뷰 정보를 가져오는 함수 호출
         rank, category, blog_review, visitor_review, index = find_rank_and_reviews(index, keyword, place_id)
 
+        # 순위가 존재할 경우 처리
         if rank is not None:
-            # 최초순위가 없으면 최초순위로 설정
+            # 최초 순위가 없으면 설정
             if row['최초순위'] is None or row['최초순위'] == '':
                 cursor.execute("UPDATE keywords SET 최초순위 = %s WHERE id = %s", (rank, index))
 
-            # 최고순위가 없거나 현재순위가 최고순위보다 높으면 최고순위 업데이트
+            # 최고 순위를 업데이트 (현재 순위가 더 낮을 경우)
             최고순위 = int(row['최고순위']) if row['최고순위'] else 0
             rank = int(rank)
 
             if row['최고순위'] is None or 최고순위 == 0 or rank < 최고순위:
                 최고순위 = rank
 
-            # 변동이력 계산
+            # 변동 이력 계산
             이전순위 = int(row['현재순위']) if row['현재순위'] is not None and row['현재순위'] != '' else rank
             변동이력 = rank - 이전순위
-            변동이력_str = f"+{변동이력}" if 변동이력 > 0 else f"{변동이력}"
+            변동이력_str = f"+{변동이력}" if 변동이력 > 0 else str(변동이력)
 
             # 최신일자 업데이트
             now = datetime.now().strftime('%Y-%m-%d %H:%M')
 
-            # 현재순위, 최고순위, 변동이력, 최신일자, 카테고리, 리뷰 업데이트
-            cursor.execute(""" 
+            # 현재순위, 최고순위, 변동이력, 최신일자, 카테고리, 리뷰 정보 업데이트
+            cursor.execute("""
                 UPDATE keywords 
                 SET 현재순위 = %s, 최고순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
                 WHERE id = %s
             """, (rank, 최고순위, 변동이력_str, now, category, blog_review, visitor_review, index))
 
+            # 변경 사항 커밋
             conn.commit()
 
-            # 커밋 후 업데이트된 데이터를 응답으로 반환
+            # 업데이트된 데이터를 JSON으로 반환
             return jsonify({
                 'rank': rank,
                 'category': category,
@@ -734,14 +736,17 @@ def fetch():
             })
 
         else:
-            # 순위가 없으면 110순위권 밖이라는 메시지 반환
+            # 순위가 없을 경우
             return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404
 
     except Exception as e:
         print(f"Database error: {e}")
         return jsonify({'error': 'Database error occurred.'}), 500
+
     finally:
+        # 데이터베이스 연결 종료
         conn.close()
+
 
 
 # 메인 페이지 렌더링
@@ -762,11 +767,32 @@ def main():
         return redirect(url_for('login'))  # 로그인되지 않았다면 로그인 페이지로 리다이렉트
 
 
+# 순위 조회 API
+@app.route('/get_rank', methods=['POST'])
+def get_rank():
+    data = request.get_json()
+
+    place_name = data.get('place_name')
+    place_id = data.get('place_id')
+    keyword = data.get('keyword')
+
+    rank, category, blog_review, visitor_review, index = find_rank_and_reviews(0, keyword, place_id)
+
+    if rank is not None:
+        return jsonify({
+            'rank': rank,
+            'category': category,
+            'blog_review': blog_review,
+            'visitor_review': visitor_review
+        })
+    else:
+        return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404
+
+
 # 실시간 검색 페이지 렌더링
 @app.route('/search')
-def search_page():
-    return render_template('search.html')
-
+def search():
+    return render_template('search.html', is_admin=current_user.role == 'admin')
 
 @app.route('/manager_management')
 @login_required
@@ -788,23 +814,29 @@ def manager_management():
     # 관리자 데이터를 템플릿으로 전달
     return render_template('manager_management.html', managers=managers)
 
+@app.route('/delete_manager/<int:manager_id>', methods=['DELETE'])
+@login_required
+def delete_manager(manager_id):
+    # 관리자가 아닌 사용자는 삭제 불가
+    if current_user.role != 'admin':
+        return jsonify({'error': '권한이 없습니다.'}), 403
 
-# 순위 조회 API
-@app.route('/get_rank', methods=['POST'])
-def get_rank():
-    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    place_name = data.get('place_name')
-    place_id = data.get('place_id')
-    keyword = data.get('keyword')
+        # 관리자가 담당하고 있는 업무는 그대로 유지되므로 businesses 테이블은 건드리지 않음
+        # users 테이블에서 관리자를 삭제
+        cursor.execute("DELETE FROM users WHERE id = %s AND role = 'manager'", (manager_id,))
+        conn.commit()
 
-    index, rank, category, blog_review, visitor_review = find_rank_and_reviews(0, keyword, place_id)
-
-    if rank is not None:
-        return jsonify({'rank': rank})
-    else:
-        return jsonify({'error': '순위를 찾을 수 없습니다.'}), 400
-
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 # @app.route('/create_manager_account', methods=['POST'])
 # @login_required
@@ -1039,6 +1071,35 @@ def admin_dashboard():
 @app.route('/check_rank', methods=['POST'])
 def check_rank():
     return jsonify({'message': 'Rank checked successfully'})
+
+
+# 키워드 삭제 라우트
+@app.route('/delete_keyword', methods=['POST'])
+@login_required
+def delete_keyword():
+    data = request.get_json()
+    keyword_id = data.get('id')
+
+    if not keyword_id:
+        return jsonify({'error': 'No keyword ID provided'}), 400
+
+    try:
+        # DB 연결
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 해당 키워드를 DB에서 삭제
+        cursor.execute("DELETE FROM keywords WHERE id = %s", (keyword_id,))
+        conn.commit()
+
+        return jsonify({'success': True, 'message': 'Keyword deleted successfully!'})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 
 # 담당자 등록
 # def register_managers():

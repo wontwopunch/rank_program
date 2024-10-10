@@ -85,7 +85,7 @@
             width: 60px;
         }
 
-                .logout-btn {
+        .logout-btn {
             background-color: #dc3545;
             color: white;
             border: none;
@@ -96,282 +96,323 @@
 
         .logout-btn:hover {
             background-color: #c82333;
+        }
+
+            .btn-custom-danger {
+        background-color: #dc3545; /* Bootstrap의 btn-danger 색상 */
+        color: white;
+        border: none;
+        padding: 2px 5px;
+        height: 30px;
+        width: 60px;
+        font-size: 10px;
+    }
+
+    .btn-custom-danger:hover {
+        background-color: #c82333; /* Hover 시 어두운 빨간색 */
+    }
     </style>
 </head>
 <body>
 
-    <!-- 네비게이션 바 -->
-    <nav class="navbar navbar-expand-lg navbar-custom">
-        <div class="container-fluid">
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin_dashboard">순위체크</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/manager_management">영업자관리</a>
-                    </li>
-                </ul>
-                <!-- 로그아웃 버튼 추가 -->
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <form action="/logout" method="POST">
-                            <button type="submit" class="logout-btn">로그아웃</button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
+<!-- 네비게이션 바 -->
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin_dashboard">순위체크</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/search">실시간 체크</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/manager_management">영업자관리</a>
+                </li>
+            </ul>
+            <!-- 로그아웃 버튼 추가 -->
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <form action="/logout" method="POST">
+                        <button type="submit" class="logout-btn">로그아웃</button>
+                    </form>
+                </li>
+            </ul>
         </div>
-    </nav>
-
-    <!-- 메인 컨텐츠 -->
-    <div class="container-fluid mt-4">
-        <!-- Admin Dashboard 내용 -->
-        <div class="text-center mb-4">
-            <h1 class="header-text">Admin Dashboard</h1>
-        </div>
-        <!-- 여기에 다른 콘텐츠 추가 -->
     </div>
+</nav>
 
-        <!-- 검색 및 정렬 기능 -->
-        <div class="d-flex justify-content-between mb-3">
-            <!-- 검색 기능 -->
-            <div class="col-md-4">
-                <div class="input-group input-group-sm shadow-sm">
-                    <input type="text" id="companySearchInput" class="form-control rounded-start" placeholder="업체명을 입력하세요" aria-label="Search" oninput="searchCompany()">
-                    <button class="btn btn-primary rounded-end" type="button" onclick="searchCompany()">검색</button>
-                </div>
-            </div>
+<!-- 메인 컨텐츠 -->
+<div class="container-fluid mt-4">
+    <div class="text-center mb-4">
+        <h1 class="header-text" style="font-weight:bold;">비전온라인마케팅</h1>
+    </div>
+</div>
 
-            <!-- 정렬 버튼과 + 버튼을 한 줄에 배치 -->
-            <div class="d-flex justify-content-end">
-                <button class="btn btn-secondary me-2" onclick="sortTableByRank('asc')">오름차순</button>
-                <button class="btn btn-success" id="addRowBtn">+</button>
-            </div>
-        </div>
-
-        <!-- 테이블 카드 -->
-        <div class="card card-custom p-4">
-            <div class="table-responsive">
-                <table class="table table-striped" id="keyword-table" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>등록일</th>
-                            <th>상호명</th>
-                            <th>플레이스번호</th>
-                            <th>키워드</th>
-                            <th>카테고리</th>
-                            <th>최초순위</th>
-                            <th>최고순위</th>
-                            <th>현재순위</th>
-                            <th>담당자</th>
-                            <th>변동이력</th>
-                            <th>블로그리뷰</th>
-                            <th>방문자리뷰</th>
-                            <th>최신일자</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in data %}
-                        <tr>
-                            <td>{{ row['id'] }}</td>
-                            <td>{{ row['등록일'] }}</td>
-                            <td>{{ row['상호명'] }}</td>
-                            <td>{{ row['플레이스번호'] }}</td>
-                            <td>{{ row['키워드'] }}</td>
-                            <td>{{ row['카테고리'] }}</td>
-                            <td>{{ row['최초순위'] }}</td>
-                            <td>{{ row['최고순위'] }}</td>
-                            <td>{{ row['현재순위'] }}</td>
-                            <td>{{ row['담당자'] }}</td>
-                            <td>{{ row['변동이력'] }}</td>
-                            <td>{{ row['블로그리뷰'] }}</td>
-                            <td>{{ row['방문자리뷰'] }}</td>
-                            <td>{{ row['최신일자'] }}</td>
-                            <td>
-                                <button class="btn btn-primary"
-                                    data-id="{{ row['id'] }}"
-                                    data-keyword="{{ row['키워드'] }}"
-                                    data-place-id="{{ row['플레이스번호'] }}"
-                                    data-place-name="{{ row['상호명'] }}"
-                                    onclick="fetchData(this)">조회</button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+<!-- 검색 및 정렬 기능 -->
+<div class="d-flex justify-content-between mb-3">
+    <div class="col-md-4">
+        <div class="input-group input-group-sm shadow-sm">
+            <input type="text" id="companySearchInput" class="form-control rounded-start" placeholder="업체명을 입력하세요" aria-label="Search" oninput="searchCompany()">
+            <button class="btn btn-primary rounded-end" type="button" onclick="searchCompany()">검색</button>
         </div>
     </div>
 
-    <!-- JavaScript 코드 -->
-    <script>
-        // 검색 기능
-        function searchCompany() {
-            const input = document.getElementById("companySearchInput").value.toLowerCase();
-            const table = document.getElementById("keyword-table");
-            const tr = table.getElementsByTagName("tr");
+    <div class="d-flex justify-content-end">
+        <button class="btn btn-secondary me-2" onclick="sortTableByRank()">★</button>
+        <button class="btn btn-success" id="addRowBtn">+</button>
+    </div>
+</div>
 
-            for (let i = 1; i < tr.length; i++) {  // 헤더를 건너뛰기 위해 i=1부터 시작
-                const td = tr[i].getElementsByTagName("td")[2];  // 상호명이 3번째 컬럼 (인덱스 2)
-                if (td) {
-                    const txtValue = td.textContent || td.innerText;
-                    tr[i].style.display = txtValue.toLowerCase().includes(input) ? "" : "none";
-                }
-            }
+<!-- 테이블 카드 -->
+<div class="card card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-striped" id="keyword-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>등록일</th>
+                    <th>상호명</th>
+                    <th>플레이스번호</th>
+                    <th>키워드</th>
+                    <th>카테고리</th>
+                    <th>최초순위</th>
+                    <th>최고순위</th>
+                    <th>현재순위</th>
+                    <th>담당자</th>
+                    <th>변동이력</th>
+                    <th>블로그리뷰</th>
+                    <th>방문자리뷰</th>
+                    <th>최신일자</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in businesses %}
+                <tr>
+                    <td>{{ row['ID'] }}</td>
+                    <td>{{ row['등록일'] }}</td>
+                    <td>{{ row['상호명'] }}</td>
+                    <td>{{ row['플레이스번호'] }}</td>
+                    <td>{{ row['키워드'] }}</td>
+                    <td>{{ row['카테고리'] }}</td>
+                    <td>{{ row['최초순위'] }}</td>
+                    <td>{{ row['최고순위'] }}</td>
+                    <td>{{ row['현재순위'] }}</td>
+                    <td>{{ row['담당자'] }}</td>
+                    <td>{{ row['변동이력'] }}</td>
+                    <td>{{ row['블로그리뷰'] }}</td>
+                    <td>{{ row['방문자리뷰'] }}</td>
+                    <td>{{ row['최신일자'] }}</td>
+                    <td>
+                        <button class="btn btn-primary" data-id="{{ row['id'] }}" onclick="fetchData(this)">조회</button>
+                    </td>
+<!--                    <td>-->
+<!--                        <button class="btn btn-danger" data-id="{{ row['id'] }}" onclick="deleteKeyword(this)">삭제</button>-->
+<!--                    </td>-->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
-            // 입력값이 없으면 전체 데이터를 다시 보여줌
-            if (!input) {
-                showAllRows();
-            }
-        }
+<script>
+    let isSortedAscending = false;  // 정렬 상태 저장 변수
+    let originalRows = [];  // 초기 테이블 로드 시의 순서 저장
 
-        // 전체 데이터를 다시 보여주는 함수
-        function showAllRows() {
-            const table = document.getElementById("keyword-table");
-            const tr = table.getElementsByTagName("tr");
-            for (let i = 1; i < tr.length; i++) {
-                tr[i].style.display = "";
-            }
-        }
+    // 페이지 로드 시 초기 데이터를 저장하는 함수
+    window.onload = function() {
+        const table = document.getElementById("keyword-table");
+        const tbody = table.querySelector("tbody");
+        originalRows = Array.from(tbody.querySelectorAll("tr"));  // 초기 로드된 순서 저장
+    };
 
-        // 오름차순 정렬 기능
-        function sortTableByRank(order) {
-            const table = document.getElementById("keyword-table");
-            let switching = true;
-            let shouldSwitch;
-            let dir = order === 'asc' ? 1 : -1;
+    // 최고순위 기준으로 정렬하는 함수
+    function sortTableByRank() {
+        const table = document.getElementById("keyword-table");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
 
-            while (switching) {
-                switching = false;
-                const rows = table.rows;
+        if (!isSortedAscending) {
+            rows.sort((a, b) => {
+                const rankA = parseInt(a.getElementsByTagName("TD")[7].innerText) || 0;
+                const rankB = parseInt(b.getElementsByTagName("TD")[7].innerText) || 0;
 
-                for (let i = 1; i < rows.length - 1; i++) {
-                    shouldSwitch = false;
-                    const x = parseInt(rows[i].getElementsByTagName("TD")[8].innerText);  // 현재순위 (9번째 컬럼, 인덱스 8)
-                    const y = parseInt(rows[i + 1].getElementsByTagName("TD")[8].innerText);
-
-                    if (dir === 1 && x > y) {
-                        shouldSwitch = true;
-                        break;
-                    } else if (dir === -1 && x < y) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                } else {
-                    break;
-                }
-            }
-        }
-
-        // 조회 버튼 기능
-        function fetchData(button) {
-            const index = button.getAttribute('data-id');
-            const keyword = button.getAttribute('data-keyword');
-            const placeId = button.getAttribute('data-place-id');
-            const placeName = button.getAttribute('data-place-name');
-
-            fetch('/fetch', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    index: index,
-                    keyword: keyword,
-                    place_id: placeId,
-                    place_name: placeName
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.rank) {
-                    alert(`'${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.`);
-                    location.reload();  // 페이지 리로드하여 업데이트된 순위를 표시
-                } else {
-                    alert(data.error || '순위를 찾을 수 없습니다.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('오류가 발생했습니다.');
+                if (rankA === 0) return 1;
+                if (rankB === 0) return -1;
+                return rankA - rankB;
             });
+            isSortedAscending = true;
+        } else {
+            rows.length = 0;  // 기존 행들을 모두 제거
+            originalRows.forEach(row => rows.push(row));  // 원래 순서로 행 복원
+            isSortedAscending = false;
         }
 
-        // + 버튼 기능 (새로운 행 추가)
-        document.getElementById('addRowBtn').addEventListener('click', function() {
-            const table = document.getElementById('keyword-table').getElementsByTagName('tbody')[0];
-            const newRow = table.insertRow(0);  // 맨 위에 새로운 행 추가
+        rows.forEach(row => tbody.appendChild(row));
+    }
 
-            // 각 셀에 입력 필드 추가
-            for (let i = 0; i < 15; i++) {
-                const cell = newRow.insertCell(i);
-                if (i === 14) {  // Action 버튼 위치
-                    const saveButton = document.createElement('button');
-                    saveButton.className = 'btn btn-success';
-                    saveButton.textContent = '저장';
-                    saveButton.onclick = function() {
-                        saveNewRow(this);
-                    };
-                    cell.appendChild(saveButton);
-                } else {
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control form-control-sm';
-                    cell.appendChild(input);
-                }
+    // 검색 기능
+    function searchCompany() {
+        const input = document.getElementById("companySearchInput").value.toLowerCase();
+        const table = document.getElementById("keyword-table");
+        const tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            const td = tr[i].getElementsByTagName("td")[2];
+            if (td) {
+                const txtValue = td.textContent || td.innerText;
+                tr[i].style.display = txtValue.toLowerCase().includes(input) ? "" : "none";
             }
+        }
+
+        if (!input) {
+            showAllRows();
+        }
+    }
+
+    function showAllRows() {
+        const table = document.getElementById("keyword-table");
+        const tr = table.getElementsByTagName("tr");
+        for (let i = 1; i < tr.length; i++) {
+            tr[i].style.display = "";
+        }
+    }
+
+    // 조회 버튼 기능
+    function fetchData(button) {
+        const index = button.getAttribute('data-id');
+        const keyword = button.getAttribute('data-keyword');
+        const placeId = button.getAttribute('data-place-id');
+        const placeName = button.getAttribute('data-place-name');
+
+        fetch('/fetch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                index: index,
+                keyword: keyword,
+                place_id: placeId,
+                place_name: placeName
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.rank) {
+                // 순위가 있는 경우 알림 창 띄움
+                alert(`'${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.`);
+                location.reload();  // 페이지를 새로고침하여 업데이트된 데이터를 표시
+            } else {
+                // 순위를 찾을 수 없으면 '110순위권 밖입니다' 팝업을 띄움
+                alert('110순위권 밖입니다.');
+            }
+        })
+        .catch(error => {
+            // 오류 발생 시 콘솔에 출력하고 사용자에게 알림
+            console.error('Error:', error);
+            alert('오류가 발생했습니다.');
         });
+    }
 
-        // 새로운 행 저장 기능
-        function saveNewRow(button) {
-            const row = button.parentNode.parentNode;
-            const cells = row.getElementsByTagName('td');
-            const data = {
-                date: cells[1].getElementsByTagName('input')[0].value,
-                place_name: cells[2].getElementsByTagName('input')[0].value,
-                place_id: cells[3].getElementsByTagName('input')[0].value,
-                keyword: cells[4].getElementsByTagName('input')[0].value,
-                manager: cells[9].getElementsByTagName('input')[0].value,
-                current_rank: cells[8].getElementsByTagName('input')[0].value
-            };
+     // 키워드 삭제 함수
+    function deleteKeyword(button) {
+        const keywordId = button.getAttribute('data-id');
 
-            fetch('/add_row', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert('새로운 행이 추가되었습니다.');
-                    location.reload();
-                } else {
-                    alert('오류가 발생했습니다: ' + result.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('오류가 발생했습니다.');
-            });
+        if (!confirm('정말 이 키워드를 삭제하시겠습니까?')) {
+            return;
         }
-    </script>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+        fetch('/delete_keyword', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: keywordId }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('키워드가 성공적으로 삭제되었습니다.');
+                location.reload(); // 페이지를 새로고침하여 목록을 업데이트
+            } else {
+                alert('삭제 실패: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('오류가 발생했습니다.');
+        });
+    }
+
+
+    // + 버튼 기능 (새로운 행 추가)
+    document.getElementById('addRowBtn').addEventListener('click', function() {
+        const table = document.getElementById('keyword-table').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow(0);
+
+        for (let i = 0; i < 15; i++) {
+            const cell = newRow.insertCell(i);
+            if (i === 14) {
+                const saveButton = document.createElement('button');
+                saveButton.className = 'btn btn-success';
+                saveButton.textContent = '저장';
+                saveButton.onclick = function() {
+                    saveNewRow(this);
+                };
+                cell.appendChild(saveButton);
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                cell.appendChild(input);
+            }
+        }
+    });
+
+    function saveNewRow(button) {
+        const row = button.parentNode.parentNode;
+        const cells = row.getElementsByTagName('td');
+        const data = {
+            date: cells[1].getElementsByTagName('input')[0].value,
+            place_name: cells[2].getElementsByTagName('input')[0].value,
+            place_id: cells[3].getElementsByTagName('input')[0].value,
+            keyword: cells[4].getElementsByTagName('input')[0].value,
+            manager: cells[9].getElementsByTagName('input')[0].value,
+            current_rank: cells[8].getElementsByTagName('input')[0].value
+        };
+
+        fetch('/add_row', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('새로운 행이 추가되었습니다.');
+                location.reload();
+            } else {
+                alert('오류가 발생했습니다: ' + result.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('오류가 발생했습니다.');
+        });
+    }
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

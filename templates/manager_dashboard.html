@@ -42,7 +42,7 @@
             width: 60px;
         }
 
-                .btn-save {
+        .btn-save {
             font-size: 10px;
             padding: 2px 5px;
             height: 30px;
@@ -60,46 +60,7 @@
             padding: 20px;
         }
 
-        /* 각 열의 너비 조정 */
-        .table thead th:nth-child(3),
-        .table tbody td:nth-child(3) {
-            width: 150px;
-        }
-
-        .table thead th:nth-child(4),
-        .table tbody td:nth-child(4) {
-            width: 100px;
-        }
-
-        .table thead th:nth-child(6),
-        .table tbody td:nth-child(6) {
-            width: 70px;
-        }
-
-        .table thead th:nth-child(7),
-        .table tbody td:nth-child(7),
-        .table thead th:nth-child(8),
-        .table tbody td:nth-child(8),
-        .table thead th:nth-child(9),
-        .table tbody td:nth-child(9),
-        .table thead th:nth-child(11),
-        .table tbody td:nth-child(11) {
-            width: 50px;
-        }
-
-        .table thead th:nth-child(10),
-        .table tbody td:nth-child(10) {
-            width: 60px;
-        }
-
-        .table thead th:nth-child(12),
-        .table tbody td:nth-child(12),
-        .table thead th:nth-child(13),
-        .table tbody td:nth-child(13) {
-            width: 60px;
-        }
-
-                .logout-btn {
+        .logout-btn {
             background-color: #dc3545;
             color: white;
             border: none;
@@ -110,6 +71,58 @@
 
         .logout-btn:hover {
             background-color: #c82333;
+        }
+
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .popup h3 {
+            color: #ff4d4d;
+        }
+
+        .popup button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 999;
+        }
+
+       .table tbody .btn-custom-danger {
+        background-color: #dc3545; /* Bootstrap의 btn-danger 색상 */
+        color: white;
+        border: none;
+        padding: 2px 5px;
+        height: 30px;
+        width: 60px;
+        font-size: 10px;
+    }
+
+    .btn-custom-danger:hover {
+        background-color: #c82333; /* Hover 시 어두운 빨간색 */
+    }
+
     </style>
 </head>
 <body>
@@ -127,10 +140,10 @@
                         <a class="nav-link" href="/admin_dashboard">순위체크</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/search">실시간 체크</a> <!-- 실시간 체크 페이지 추가 -->
+                        <a class="nav-link" href="/search">실시간 체크</a>
                     </li>
                 </ul>
-                <!-- 로그아웃 버튼 추가 -->
+                <!-- 로그아웃 버튼 -->
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <form action="/logout" method="POST">
@@ -144,9 +157,8 @@
 
     <!-- 메인 컨텐츠 -->
     <div class="container-fluid mt-4">
-        <!-- Manager Dashboard 내용 -->
         <div class="text-center mb-4">
-            <h1 class="header-text">Manager Dashboard</h1>
+            <h1 class="header-text" style="font-weight:bold;">비전온라인마케팅</h1>
         </div>
 
         <!-- 검색 및 정렬 기능 -->
@@ -159,20 +171,20 @@
                 </div>
             </div>
 
-            <!-- 정렬 버튼과 + 버튼을 한 줄에 배치 -->
+            <!-- 정렬 버튼과 + 버튼 -->
             <div class="d-flex justify-content-end">
-                <button class="btn btn-secondary me-2" onclick="sortTableByRank('asc')">오름차순</button>
+                <button class="btn btn-secondary me-2" onclick="sortTableByRank()">★</button>
                 <button class="btn btn-success" id="addRowBtn">+</button>
             </div>
         </div>
 
-        <!-- 테이블 카드 -->
+        <!-- 테이블 -->
         <div class="card card-custom p-4">
             <div class="table-responsive">
                 <table class="table table-striped" id="keyword-table" style="width: 100%;">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>ID</th>  <!-- ID 대신 id로 변경 -->
                             <th>등록일</th>
                             <th>상호명</th>
                             <th>플레이스번호</th>
@@ -189,7 +201,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                     <tbody>
                         {% for row in businesses %}
                         <tr>
                             <td>{{ row['ID'] }}</td>
@@ -202,13 +214,13 @@
                             <td>{{ row['최고순위'] }}</td>
                             <td>{{ row['현재순위'] }}</td>
                             <td>{{ row['담당자'] }}</td>
-                            <td>{{ row['변동이력'] }}</td>
+                            <td>{{ row['변동이력'] }}</td> <!-- 미리 계산된 변동이력 표시 -->
                             <td>{{ row['블로그리뷰'] }}</td>
                             <td>{{ row['방문자리뷰'] }}</td>
                             <td>{{ row['최신일자'] }}</td>
                             <td>
                                 <button class="btn btn-primary"
-                                    data-id="{{ row['id'] }}"
+                                    data-id="{{ row['ID'] }}"
                                     data-keyword="{{ row['키워드'] }}"
                                     data-place-id="{{ row['플레이스번호'] }}"
                                     data-place-name="{{ row['상호명'] }}"
@@ -223,177 +235,198 @@
         </div>
     </div>
 
+    <!-- 팝업 HTML 요소 추가 -->
+    <div class="overlay" id="overlay"></div>
+    <div class="popup" id="popup">
+        <h3>110순위권 밖입니다</h3>
+        <p>해당 업체는 110순위권 밖에 있습니다.</p>
+        <button onclick="closePopup()">닫기</button>
+    </div>
     <!-- JavaScript 코드 -->
     <script>
-        // 검색 기능
-        function searchCompany() {
-            const input = document.getElementById("companySearchInput").value.toLowerCase();
-            const table = document.getElementById("keyword-table");
-            const tr = table.getElementsByTagName("tr");
+    let isSortedAscending = false;  // 정렬 상태 저장 변수
+    let originalRows = [];  // 초기 테이블 로드 시의 순서 저장
 
-            for (let i = 1; i < tr.length; i++) {
-                const td = tr[i].getElementsByTagName("td")[2];
-                if (td) {
-                    const txtValue = td.textContent || td.innerText;
-                    tr[i].style.display = txtValue.toLowerCase().includes(input) ? "" : "none";
-                }
-            }
+    // 페이지 로드 시 초기 데이터를 저장하는 함수
+    window.onload = function() {
+        const table = document.getElementById("keyword-table");
+        const tbody = table.querySelector("tbody");
+        originalRows = Array.from(tbody.querySelectorAll("tr"));  // 초기 로드된 순서 저장
+    };
 
-            if (!input) {
-                showAllRows();
-            }
-        }
+    // 최고순위 기준으로 정렬하는 함수
+    function sortTableByRank() {
+        const table = document.getElementById("keyword-table");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
 
-        // 전체 데이터를 다시 보여주는 함수
-        function showAllRows() {
-            const table = document.getElementById("keyword-table");
-            const tr = table.getElementsByTagName("tr");
-            for (let i = 1; i < tr.length; i++) {
-                tr[i].style.display = "";
-            }
-        }
+        if (!isSortedAscending) {
+            rows.sort((a, b) => {
+                const rankA = parseInt(a.getElementsByTagName("TD")[7].innerText) || 0;
+                const rankB = parseInt(b.getElementsByTagName("TD")[7].innerText) || 0;
 
-        // 오름차순 정렬 기능
-        function sortTableByRank(order) {
-            const table = document.getElementById("keyword-table");
-            let switching = true;
-            let shouldSwitch;
-            let dir = order === 'asc' ? 1 : -1;
-
-            while (switching) {
-                switching = false;
-                const rows = table.rows;
-
-                for (let i = 1; i < rows.length - 1; i++) {
-                    shouldSwitch = false;
-                    const x = parseInt(rows[i].getElementsByTagName("TD")[8].innerText);
-                    const y = parseInt(rows[i + 1].getElementsByTagName("TD")[8].innerText);
-
-                    if (dir === 1 && x > y) {
-                        shouldSwitch = true;
-                        break;
-                    } else if (dir === -1 && x < y) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                } else {
-                    break;
-                }
-            }
-        }
-
-        // 조회 버튼 기능
-        function fetchData(button) {
-            const index = button.getAttribute('data-id');
-            const keyword = button.getAttribute('data-keyword');
-            const placeId = button.getAttribute('data-place-id');
-            const placeName = button.getAttribute('data-place-name');
-
-            fetch('/fetch', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    index: index,
-                    keyword: keyword,
-                    place_id: placeId,
-                    place_name: placeName
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.rank) {
-                    alert(`'${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.`);
-                    location.reload();
-                } else {
-                    alert(data.error || '순위를 찾을 수 없습니다.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('오류가 발생했습니다.');
+                if (rankA === 0) return 1;
+                if (rankB === 0) return -1;
+                return rankA - rankB;
             });
+            isSortedAscending = true;
+        } else {
+            rows.length = 0;  // 기존 행들을 모두 제거
+            originalRows.forEach(row => rows.push(row));  // 원래 순서로 행 복원
+            isSortedAscending = false;
         }
 
-        // + 버튼 기능 (새로운 행 추가)
-        document.getElementById('addRowBtn').addEventListener('click', function(event) {
-            event.stopPropagation();  // 클릭 이벤트 전파 방지
+        rows.forEach(row => tbody.appendChild(row));
+    }
 
-            const table = document.getElementById('keyword-table').getElementsByTagName('tbody')[0];
-            const newRow = table.insertRow(0);
+    // 검색 기능
+    function searchCompany() {
+        const input = document.getElementById("companySearchInput").value.toLowerCase();
+        const table = document.getElementById("keyword-table");
+        const tr = table.getElementsByTagName("tr");
 
-            // 테이블 컬럼에 맞춰 입력 필드 추가
-            const columns = ['ID', '등록일', '상호명', '플레이스번호', '키워드', '카테고리', '최초순위', '최고순위', '현재순위', '담당자', '변동이력', '블로그리뷰', '방문자리뷰', '최신일자'];
+        for (let i = 1; i < tr.length; i++) {
+            const td = tr[i].getElementsByTagName("td")[2];
+            if (td) {
+                const txtValue = td.textContent || td.innerText;
+                tr[i].style.display = txtValue.toLowerCase().includes(input) ? "" : "none";
+            }
+        }
 
-            columns.forEach((col, index) => {
-                const cell = newRow.insertCell(index);
-                if (index === 2 || index === 3 || index === 4) {
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control form-control-sm';
-                    cell.appendChild(input);
-                } else {
-                    cell.innerHTML = '-';  // ID, 카테고리 및 리뷰 관련 필드는 비워둠
-                }
-            });
+        if (!input) {
+            showAllRows();
+        }
+    }
 
-            // 저장 버튼 추가
-            const actionCell = newRow.insertCell();
-            const saveButton = document.createElement('button');
-            saveButton.className = 'btn btn-primary btn-save';
-            saveButton.textContent = '저장';
-            saveButton.onclick = function() {
-                saveNewRow(this);
-            };
-            actionCell.appendChild(saveButton);
+    function showAllRows() {
+        const table = document.getElementById("keyword-table");
+        const tr = table.getElementsByTagName("tr");
+        for (let i = 1; i < tr.length; i++) {
+            tr[i].style.display = "";
+        }
+    }
 
-            // 다른 곳을 클릭했을 때 빈 행 삭제
-            document.addEventListener('click', function removeRowOnClick(event) {
-                if (!newRow.contains(event.target) && event.target.id !== 'addRowBtn') {
-                    newRow.remove();
-                    document.removeEventListener('click', removeRowOnClick); // 이벤트 리스너 삭제
-                }
-            }, { once: true });
+    // 조회 버튼 기능
+    function fetchData(button) {
+        const index = button.getAttribute('data-id');
+        const keyword = button.getAttribute('data-keyword');
+        const placeId = button.getAttribute('data-place-id');
+        const placeName = button.getAttribute('data-place-name');
+
+        fetch('/fetch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                index: index,
+                keyword: keyword,
+                place_id: placeId,
+                place_name: placeName
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.rank) {
+                alert(`'${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.`);
+                location.reload();
+            } else {
+                alert(data.error || '순위를 찾을 수 없습니다.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('오류가 발생했습니다.');
         });
+    }
 
-        // 새로운 행 저장 기능
-        function saveNewRow(button) {
-            const row = button.parentNode.parentNode;
-            const cells = row.getElementsByTagName('td');
-            const data = {
-                place_name: cells[2].getElementsByTagName('input')[0].value,
-                place_id: cells[3].getElementsByTagName('input')[0].value,
-                keyword: cells[4].getElementsByTagName('input')[0].value
-            };
+        // 키워드 삭제 함수
+    function deleteKeyword(button) {
+        const keywordId = button.getAttribute('data-id');
 
-            fetch('/add_row', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert('새로운 행이 추가되었습니다.');
-                    location.reload();
-                } else {
-                    alert('오류가 발생했습니다: ' + result.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('오류가 발생했습니다.');
-            });
+        if (!confirm('정말 이 키워드를 삭제하시겠습니까?')) {
+            return;
         }
 
+        fetch('/delete_keyword', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: keywordId }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('키워드가 성공적으로 삭제되었습니다.');
+                location.reload(); // 페이지를 새로고침하여 목록을 업데이트
+            } else {
+                alert('삭제 실패: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('오류가 발생했습니다.');
+        });
+    }
+
+    // + 버튼 기능 (새로운 행 추가)
+    document.getElementById('addRowBtn').addEventListener('click', function() {
+        const table = document.getElementById('keyword-table').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow(0);
+
+        for (let i = 0; i < 15; i++) {
+            const cell = newRow.insertCell(i);
+            if (i === 14) {
+                const saveButton = document.createElement('button');
+                saveButton.className = 'btn btn-success';
+                saveButton.textContent = '저장';
+                saveButton.onclick = function() {
+                    saveNewRow(this);
+                };
+                cell.appendChild(saveButton);
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                cell.appendChild(input);
+            }
+        }
+    });
+
+    function saveNewRow(button) {
+        const row = button.parentNode.parentNode;
+        const cells = row.getElementsByTagName('td');
+        const data = {
+            date: cells[1].getElementsByTagName('input')[0].value,
+            place_name: cells[2].getElementsByTagName('input')[0].value,
+            place_id: cells[3].getElementsByTagName('input')[0].value,
+            keyword: cells[4].getElementsByTagName('input')[0].value,
+            manager: cells[9].getElementsByTagName('input')[0].value,
+            current_rank: cells[8].getElementsByTagName('input')[0].value
+        };
+
+        fetch('/add_row', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('새로운 행이 추가되었습니다.');
+                location.reload();
+            } else {
+                alert('오류가 발생했습니다: ' + result.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('오류가 발생했습니다.');
+        });
+    }
     </script>
 
     <!-- Bootstrap JS -->
