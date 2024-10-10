@@ -11,26 +11,17 @@ from selenium.webdriver.common.by import By  # 요소 찾기를 위한 By 클래
 from selenium.webdriver.support.ui import WebDriverWait  # 요소 로딩을 대기하기 위한 모듈
 from selenium.webdriver.support import expected_conditions as EC  # 조건을 만족할 때까지 대기
 
-from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify  # Flask 웹 프레임워크 기본 모듈
+from flask import Flask, render_template, redirect, url_for, flash, request, session  # Flask 웹 프레임워크 기본 모듈
 from flask_bcrypt import Bcrypt  # 비밀번호 해싱 및 검증을 위한 Bcrypt 모듈
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required  # 사용자 세션 관리를 위한 Flask-Login
-
 
 import time  # 시간 지연 처리
 import requests  # HTTP 요청 처리
 import pandas as pd  # 데이터 처리 (주로 DataFrame 사용)
-# from sqlalchemy import create_engine  # SQLAlchemy 엔진을 사용하여 MySQL 연동
+from sqlalchemy import create_engine  # SQLAlchemy 엔진을 사용하여 MySQL 연동
 import os  # 운영 체제와의 상호작용 (파일 경로 등)
-from datetime import timedelta
 
 app = Flask(__name__)
-app.secret_key = 'your_unique_secret_key'  # 고유한 비밀 키 설정
-
-# 세션 유지 기간 설정 (선택 사항)
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
-
-# Bcrypt 인스턴스 생성
-bcrypt = Bcrypt(app)
 
 # ChromeDriver 경로 (프로젝트 내)
 chrome_driver_path = 'webdriver/chromedriver.exe'
@@ -44,37 +35,8 @@ db_config = {
 }
 
 # 로그인 관리 설정
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'  # 로그인 페이지로 리다이렉트 설정
-login_manager.remember_cookie_duration = timedelta(days=7)  # 쿠키 세션 유지 기간 설정
-
-# 사용자 클래스
-class User(UserMixin):
-    def __init__(self, id, username, password, role):
-        self.id = id
-        self.username = username
-        self.password = password
-        self.role = role
-# 사용자 등록 API
-@app.route('/register', methods=['POST'])
-def register():
-    username = request.form.get('username')
-    plain_password = request.form.get('password')
-
-    # 비밀번호 해싱
-    hashed_password = bcrypt.generate_password_hash(plain_password).decode('utf-8')
-
-    # DB에 저장하는 로직 추가
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-                   (username, hashed_password, 'admin'))  # 'admin' 역할로 저장
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return "User registered successfully"
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 
 # 사용자 로드
@@ -99,45 +61,12 @@ class User(UserMixin):
 
 
 # 로그인 페이지
-# 로그인 페이지
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     if request.method == 'POST':
-#         username = request.form.get('username')
-#         password = request.form.get('password')
-#
-#         # 데이터베이스에서 사용자 조회
-#         conn = mysql.connector.connect(**db_config)
-#         cursor = conn.cursor(dictionary=True)
-#         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-#         user = cursor.fetchone()
-#         cursor.close()
-#         conn.close()
-#
-#         if user and bcrypt.check_password_hash(user['password'], password):
-#             login_user(User(user['id'], user['username'], user['password'], user['role']), remember=True)
-#
-#             # 관리자 또는 매니저가 로그인 시 각각의 대시보드로 리다이렉트
-#             if user['role'] == 'admin':
-#                 return redirect(url_for('admin_dashboard'))
-#             elif user['role'] == 'manager':
-#                 return redirect(url_for('manager_dashboard', manager_id=user['id']))
-#         else:
-#             flash('Invalid username or password', 'danger')
-#             return redirect(url_for('login'))
-#
-#     return render_template('login.html')
-
-# 로그인 후 매니저 대시보드로 리디렉트
-# 로그인 페이지
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-
-        # 데이터베이스에서 사용자 조회
-        conn = get_db_connection()
+        conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = cursor.fetchone()
@@ -145,173 +74,87 @@ def login():
         conn.close()
 
         if user and bcrypt.check_password_hash(user['password'], password):
-            login_user(User(user['id'], user['username'], user['password'], user['role']), remember=True)
-
-            # 역할에 따른 리디렉트
+            login_user(User(user['id'], user['username'], user['password'], user['role']))
             if user['role'] == 'admin':
-                return redirect(url_for('admin_dashboard'))  # 관리자는 admin 대시보드로
-            elif user['role'] == 'manager':
-                return redirect(url_for('manager_dashboard', manager_name=user['username']))  # 매니저 대시보드로
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('manager_dashboard'))
         else:
-            flash('Invalid credentials.', 'danger')
-            return redirect(url_for('login'))
-
+            flash('Invalid credentials, please try again.', 'danger')
     return render_template('login.html')
 
 
+# 관리자 대시보드
+@app.route('/admin_dashboard')
+@login_required
+def admin_dashboard():
+    if current_user.role != 'admin':
+        return redirect(url_for('login'))
+
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE role = 'manager'")
+    managers = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('admin_dashboard.html', managers=managers)
+
+
 # 비밀번호 변경
-@app.route('/change_password', methods=['POST'])
+@app.route('/change_password', methods=['GET', 'POST'])
 @login_required
 def change_password():
-    new_password = request.form.get('new_password')
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
 
-    # 비밀번호 해싱
-    hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
         cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_password, current_user.id))
         conn.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'error': str(e)})
-    finally:
         cursor.close()
         conn.close()
 
+        flash('Password updated successfully!', 'success')
+        return redirect(url_for('manager_dashboard'))
+
+    return render_template('change_password.html')
 
 
-# @app.route('/manager_dashboard/<int:manager_id>')
-# @login_required
-# def manager_dashboard(manager_id):
-#     # 관리자나 해당 담당자만 접근 가능하도록 설정
-#     if current_user.role != 'admin' and current_user.id != manager_id:
-#         return redirect(url_for('login'))  # 관리자가 아니면 로그인 페이지로 리다이렉트
-#
-#     # MySQL에서 해당 manager의 데이터를 가져옴
-#     conn = get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-#
-#     # 해당 담당자의 정보 가져오기
-#     cursor.execute("SELECT * FROM users WHERE id = %s", (manager_id,))
-#     manager = cursor.fetchone()
-#
-#     # 해당 담당자가 관리하는 tasks 또는 businesses 가져오기 (업무에 따라 변경 가능)
-#     cursor.execute("SELECT * FROM businesses WHERE manager_id = %s", (manager_id,))
-#     businesses = cursor.fetchall()
-#
-#     cursor.close()
-#     conn.close()
-#
-#     # 디버깅용 출력
-#     print(f"Manager: {manager}")
-#     print(f"Businesses: {businesses}")
-#
-#     # manager_dashboard.html로 데이터 전달
-#     return render_template('manager_dashboard.html', manager=manager, businesses=businesses)
-
-# 관리자용: 특정 manager_id의 대시보드에 접근
-# 매니저 대시보드 (관리자도 접근 가능)
-# @app.route('/manager_dashboard/<string:manager_name>')
-# @login_required
-# def manager_dashboard(manager_name):
-#     if current_user.role != 'manager' and current_user.username != manager_name and current_user.role != 'admin':
-#         return redirect(url_for('login'))  # 접근 권한 확인
-#
-#     conn = get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-#
-#     # 해당 manager_name과 연결된 businesses 가져오기
-#     query = """
-#         SELECT DISTINCT b.id AS ID, k.등록일, k.상호명, k.플레이스번호, k.키워드,
-#                k.카테고리, k.최초순위, k.최고순위, k.현재순위, k.담당자, k.변동이력,
-#                k.블로그리뷰, k.방문자리뷰, k.최신일자
-#         FROM businesses b
-#         JOIN keywords k ON b.플레이스번호 = k.플레이스번호
-#         WHERE b.담당자 = %s
-#     """
-#     cursor.execute(query, (manager_name,))
-#     businesses = cursor.fetchall()
-#
-#     cursor.close()
-#     conn.close()
-#
-#     return render_template('manager_dashboard.html', businesses=businesses, manager_name=manager_name)
-
-@app.route('/manager_dashboard/<string:manager_name>')
+# 담당자 대시보드
+@app.route('/manager_dashboard')
 @login_required
-def manager_dashboard(manager_name):
-    # 접근 권한 확인: 매니저 본인 또는 관리자만 접근 가능
-    if current_user.role != 'admin' and current_user.username != manager_name:
-        return redirect(url_for('login'))  # 권한 없을 시 로그인 페이지로 리다이렉트
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # 해당 manager_name과 연결된 businesses 정보 가져오기
-    query = """
-        SELECT DISTINCT b.id AS ID, k.등록일, k.상호명, k.플레이스번호, k.키워드, 
-               k.카테고리, k.최초순위, k.최고순위, k.현재순위, k.담당자, k.변동이력, 
-               k.블로그리뷰, k.방문자리뷰, k.최신일자
-        FROM businesses b
-        JOIN keywords k ON b.플레이스번호 = k.플레이스번호
-        WHERE b.담당자 = %s
-    """
-    cursor.execute(query, (manager_name,))
-    businesses = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    # manager_dashboard.html 템플릿으로 데이터 전달
-    return render_template('manager_dashboard.html', businesses=businesses, manager_name=manager_name)
-
-
-# 로그인된 매니저가 자신의 대시보드에 접근
-@app.route('/my_dashboard')
-@login_required
-def my_dashboard():
+def manager_dashboard():
     if current_user.role != 'manager':
-        return redirect(url_for('login'))  # 매니저가 아닌 경우 로그인 페이지로 리디렉트
+        return redirect(url_for('login'))
 
-    # 현재 로그인된 manager가 관리하는 데이터 가져오기
-    conn = get_db_connection()
+    conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor(dictionary=True)
-
-    query = """
-        SELECT DISTINCT b.id AS ID, k.등록일, k.상호명, k.플레이스번호, k.키워드, 
-               k.카테고리, k.최초순위, k.최고순위, k.현재순위, k.담당자, k.변동이력, 
-               k.블로그리뷰, k.방문자리뷰, k.최신일자
-        FROM businesses b
-        JOIN keywords k ON b.플레이스번호 = k.플레이스번호
-        WHERE b.manager_id = %s
-    """
-    cursor.execute(query, (current_user.id,))
-    keywords_data = cursor.fetchall()
-
+    cursor.execute("SELECT * FROM businesses WHERE manager_id = %s", (current_user.id,))
+    businesses = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('manager_dashboard.html', businesses=keywords_data)
-
-
+    return render_template('manager_dashboard.html', businesses=businesses)
 
 
 # 로그아웃
-@app.route('/logout', methods=['POST'])
+@app.route('/logout')
 @login_required
 def logout():
-    logout_user()  # 로그아웃 처리
-    return redirect(url_for('login'))  # 로그인 페이지로 리다이렉트
+    logout_user()
+    return redirect(url_for('login'))
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
 # SQLAlchemy를 사용하여 MySQL 데이터베이스 연결
-# def get_sqlalchemy_engine():
-#     engine = create_engine('mysql+mysqlconnector://root:1234@localhost/your_database_name')
-#     return engine
-
+def get_sqlalchemy_engine():
+    engine = create_engine('mysql+mysqlconnector://root:1234@localhost/your_database_name')
+    return engine
 
 # MySQL 연결
 def get_db_connection():
@@ -322,21 +165,17 @@ def get_db_connection():
 def fetch_data_from_db():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute(""" 
+    cursor.execute("""
         SELECT id, 등록일, 상호명, 플레이스번호, 키워드, 카테고리, 최초순위, 최고순위, 현재순위, 담당자, 변동이력, 블로그리뷰, 방문자리뷰, 최신일자 
-        FROM keywords 
-        ORDER BY id DESC  -- ID를 내림차순으로 정렬
+        FROM keywords
     """)
     data = cursor.fetchall()
     cursor.close()
     conn.close()
     return data
 
-
-
 # 글로벌 드라이버 변수
 driver = None
-
 
 def setup_driver():
     global driver
@@ -347,15 +186,15 @@ def setup_driver():
         driver = webdriver.Chrome(service=service, options=options)
     return driver
 
-
 def close_driver():
     global driver
     if driver is not None:
         driver.quit()
         driver = None
 
+# 이제 필요할 때 driver를 생성하고 마지막에만 종료
 
-# 순위 찾기 함수
+
 def find_rank(index, keyword, place_id):
     global driver  # 드라이버 변수를 글로벌로 선언
 
@@ -390,12 +229,16 @@ def find_rank(index, keyword, place_id):
 
         # 2. 첫 번째 더보기 버튼 클릭 후 순위를 찾는 경우
         try:
+            # 스크롤을 약간 내리는 코드 추가
             driver.execute_script("window.scrollBy(0, 400);")  # 300px 정도 아래로 스크롤
             print("스크롤을 400px 내렸습니다.")
+
+            # 첫 번째 더보기 버튼을 찾기 위한 CSS 선택자 두 개를 사용
             click_more_button(driver, "a.YORrF span.Jtn42")  # 기존 CSS 선택자
             print("첫 번째 더보기 버튼 클릭됨 (a.YORrF span.Jtn42).")
             time.sleep(5)
 
+            # 만약 첫 번째 선택자에서 버튼을 찾지 못하면 class="FtXwJ"로 시도
             if not driver.find_elements(By.CSS_SELECTOR, "a.YORrF span.Jtn42"):
                 click_more_button(driver, "a.FtXwJ span.PNozS")  # 새로운 선택자 사용
                 print("첫 번째 더보기 버튼 클릭됨 (a.FtXwJ span.PNozS).")
@@ -492,18 +335,23 @@ def get_reviews(place_id):
 
         try:
             # 첫 번째 케이스: 방문자 리뷰와 블로그 리뷰가 모두 있는 경우
+            # div.dAsGb > span:nth-child(1)와 span:nth-child(2)를 모두 가져옴
             review_spans = driver.find_elements(By.CSS_SELECTOR, 'div.zD5Nm > div.dAsGb > span')
 
+            # 첫 번째 span의 텍스트에 '방문자'가 있으면 방문자 리뷰, 그렇지 않으면 블로그 리뷰로 처리
             first_review_text = review_spans[0].text
             if '방문자' in first_review_text:
+                # 방문자 리뷰로 처리
                 visitor_review_count = int(''.join(filter(str.isdigit, first_review_text)))
                 print(f"방문자 리뷰 발견: {visitor_review_count}")
 
+                # 두 번째 span은 블로그 리뷰
                 if len(review_spans) > 1:
                     second_review_text = review_spans[1].text
                     blog_review_count = int(''.join(filter(str.isdigit, second_review_text)))
                     print(f"블로그 리뷰 발견: {blog_review_count}")
             else:
+                # 첫 번째 span은 블로그 리뷰로 처리
                 blog_review_count = int(''.join(filter(str.isdigit, first_review_text)))
                 print(f"블로그 리뷰 발견: {blog_review_count}")
 
@@ -587,9 +435,9 @@ def start_crawling_and_update_db():
                     now = datetime.now().strftime('%Y-%m-%d %H:%M')
 
                     # DB 업데이트
-                    cursor.execute(""" 
+                    cursor.execute("""
                         UPDATE keywords 
-                        SET 최고순위 = %s, 현재순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
+                        SET 최고순위 = %s, 현재순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s
                         WHERE id = %s
                     """, (최고순위, rank, 변동이력_str, now, category, blog_review, visitor_review, index))
 
@@ -617,12 +465,14 @@ def start_crawling_and_update_db():
     save_to_excel()
 
 
+# 엑셀 파일로 저장하는 함수
 def save_to_excel():
     try:
-        # mysql.connector를 통해 MySQL에서 데이터를 읽어옴
-        conn = mysql.connector.connect(**db_config)
-        query = "SELECT * FROM keywords"
-        df = pd.read_sql(query, conn)  # pandas를 사용해 MySQL 데이터를 DataFrame으로 변환
+        # SQLAlchemy 엔진을 통해 MySQL에서 데이터를 읽어옴
+        engine = get_sqlalchemy_engine()
+
+        # MySQL에서 데이터 가져오기 (DataFrame 형태)
+        df = pd.read_sql('SELECT * FROM keywords', engine)
 
         # 파일명에 날짜를 포함하여 백업 파일 생성
         now = datetime.now().strftime('%Y%m%d_%H%M%S')  # 날짜와 시간을 포함하여 고유한 파일명 생성
@@ -633,7 +483,8 @@ def save_to_excel():
 
         print(f"엑셀 파일 저장 완료: {excel_path}")
 
-        conn.close()  # MySQL 연결 종료
+        # SQLAlchemy 엔진 종료
+        engine.dispose()
 
     except Exception as e:
         print(f"엑셀 파일 저장 오류: {e}")
@@ -644,10 +495,9 @@ def schedule_crawling_task(hour, minute):
     scheduler.start()
     print(f"{hour}:{minute}에 크롤링 작업이 예약되었습니다.")
 
-
 # 스케줄러 설정
 scheduler = BackgroundScheduler()
-schedule_crawling_task(1, 0)
+schedule_crawling_task(20,13)
 
 # 순위 조회 후 업데이트 처리
 @app.route('/fetch', methods=['POST'])
@@ -672,7 +522,7 @@ def fetch():
         row = cursor.fetchone()
 
         if row is None:
-            return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404  # 순위를 찾을 수 없을 때 반환
+            return jsonify({'error': 'No data found for the given index.'}), 404
 
         # 순위와 리뷰를 가져오는 함수 호출
         rank, category, blog_review, visitor_review, index = find_rank_and_reviews(index, keyword, place_id)
@@ -698,9 +548,9 @@ def fetch():
             now = datetime.now().strftime('%Y-%m-%d %H:%M')
 
             # 현재순위, 최고순위, 변동이력, 최신일자, 카테고리, 리뷰 업데이트
-            cursor.execute(""" 
-                UPDATE keywords 
-                SET 현재순위 = %s, 최고순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
+            cursor.execute("""
+                UPDATE keywords
+                SET 현재순위 = %s, 최고순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s
                 WHERE id = %s
             """, (rank, 최고순위, 변동이력_str, now, category, blog_review, visitor_review, index))
 
@@ -716,8 +566,7 @@ def fetch():
             })
 
         else:
-            # 순위가 없으면 110순위권 밖이라는 메시지 반환
-            return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404
+            return jsonify({'error': '순위를 찾을 수 없습니다.'}), 400
 
     except Exception as e:
         print(f"Database error: {e}")
@@ -727,49 +576,15 @@ def fetch():
 
 
 # 메인 페이지 렌더링
-# @app.route('/')
-# def index():
-#     data = fetch_data_from_db()  # MySQL에서 데이터를 가져옴
-#     return render_template('index.html', data=data)  # index.html 템플릿을 렌더링
-
-# 메인 페이지 렌더링
 @app.route('/')
-def main():
-    if current_user.is_authenticated:  # 사용자가 로그인된 상태라면
-        if current_user.role == 'admin':
-            return redirect(url_for('admin_dashboard'))  # 관리자 대시보드로 리다이렉트
-        else:
-            return redirect(url_for('manager_dashboard', manager_name=current_user.username))  # 영업자 대시보드로 리다이렉트
-    else:
-        return redirect(url_for('login'))  # 로그인되지 않았다면 로그인 페이지로 리다이렉트
-
+def index():
+    data = fetch_data_from_db()  # MySQL에서 데이터를 가져옴
+    return render_template('index.html', data=data)  # index.html 템플릿을 렌더링
 
 # 실시간 검색 페이지 렌더링
 @app.route('/search')
 def search_page():
     return render_template('search.html')
-
-
-@app.route('/manager_management')
-@login_required
-def manager_management():
-    if current_user.role != 'admin':
-        return redirect(url_for('login'))  # 관리자가 아니면 로그인 페이지로 리다이렉트
-
-    # MySQL 연결 및 'users' 테이블에서 중복 없는 'username'과 'password' 데이터 가져오기
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # 'manager' 역할을 가진 사용자만 가져오기
-    cursor.execute("SELECT id, username, password FROM users WHERE role = 'manager'")
-    managers = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    # 관리자 데이터를 템플릿으로 전달
-    return render_template('manager_management.html', managers=managers)
-
 
 # 순위 조회 API
 @app.route('/get_rank', methods=['POST'])
@@ -787,102 +602,6 @@ def get_rank():
     else:
         return jsonify({'error': '순위를 찾을 수 없습니다.'}), 400
 
-
-# @app.route('/create_manager_account', methods=['POST'])
-# @login_required
-# def create_manager_account():
-#     if current_user.role != 'admin':
-#         return jsonify({'error': 'Unauthorized access'}), 403
-#
-#     data = request.get_json()
-#     manager_id = data.get('id')
-#     username = data.get('username')
-#     password = data.get('password')
-#
-#     if not username or not password:
-#         return jsonify({'error': 'Username and password required'}), 400
-#
-#     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-#
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-#     try:
-#         # 특정 관리자의 계정을 업데이트 또는 새로 생성
-#         cursor.execute("UPDATE users SET username = %s, password = %s WHERE id = %s AND role = 'manager'",
-#                        (username, hashed_password, manager_id))
-#         conn.commit()
-#         return jsonify({'success': True})
-#     except Exception as e:
-#         conn.rollback()
-#         return jsonify({'error': str(e)})
-#     finally:
-#         cursor.close()
-#         conn.close()
-@app.route('/create_manager_account', methods=['POST'])
-@login_required
-def create_manager_account():
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Unauthorized access'}), 403
-
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-
-    if not username or not password:
-        return jsonify({'error': 'Invalid input'}), 400
-
-    # 비밀번호 해싱
-    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        # 새로운 매니저 계정 추가
-        cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, 'manager')",
-                       (username, hashed_password))
-        conn.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'error': str(e)})
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# 관리자 추가 API
-@app.route('/add_manager', methods=['POST'])
-@login_required
-def add_manager():
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Unauthorized access'}), 403
-
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-
-    if not username or not password:
-        return jsonify({'error': 'Invalid input'}), 400
-
-    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, 'manager')",
-                       (username, hashed_password))
-        conn.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'error': str(e)})
-    finally:
-        cursor.close()
-        conn.close()
-
-
-
-
 # 데이터베이스 연결 테스트 API
 @app.route('/test_db_connection')
 def test_db_connection():
@@ -898,7 +617,7 @@ def test_db_connection():
     except mysql.connector.Error as err:
         return f"MySQL 연결 실패: {err}"
 
-
+# 새로운 데이터 추가 API
 @app.route('/add_row', methods=['POST'])
 def add_row():
     data = request.get_json()
@@ -917,19 +636,15 @@ def add_row():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Step 1: 새로운 데이터를 마지막 ID로 삽입 (AUTO_INCREMENT를 이용하여 자동으로 ID 할당)
-        cursor.execute(""" 
-            INSERT INTO keywords (등록일, 상호명, 플레이스번호, 키워드, 현재순위, 담당자) 
-            VALUES (%s, %s, %s, %s, %s, %s) 
+        # 새로운 데이터 추가 (id는 AUTO_INCREMENT로 자동 설정)
+        cursor.execute("""
+            INSERT INTO keywords (등록일, 상호명, 플레이스번호, 키워드, 현재순위, 담당자)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (new_date, place_name, place_id, keyword, current_rank, manager))
 
         conn.commit()
 
-        # Step 2: 새로 추가된 데이터의 ID 가져오기
-        cursor.execute("SELECT LAST_INSERT_ID()")
-        new_id = cursor.fetchone()[0]  # 새로운 ID 값
-
-        return jsonify({'success': True, 'new_id': new_id})
+        return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
         print(f"Error adding new row: {e}")
@@ -937,151 +652,7 @@ def add_row():
     finally:
         conn.close()
 
-@app.route('/add_business', methods=['POST'])
-def add_business():
-    data = request.get_json()
 
-    name = data.get('name')
-    manager_id = data.get('manager_id')
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # 중복 확인: 플레이스번호와 키워드를 기준으로 중복을 확인
-    check_query = """
-        SELECT * FROM businesses b
-        JOIN keywords k ON b.플레이스번호 = k.플레이스번호
-        WHERE k.키워드 = %s AND k.플레이스번호 = %s
-    """
-    cursor.execute(check_query, (data.get('keyword'), data.get('place_id')))
-    existing_entry = cursor.fetchone()
-
-    if existing_entry:
-        # 중복된 데이터가 있으면 추가하지 않고 메시지 반환
-        cursor.close()
-        conn.close()
-        return jsonify({'error': 'Duplicate entry found, business not added.'}), 409
-
-    # 중복이 없으면 새로운 business 추가
-    insert_query = "INSERT INTO businesses (name, manager_id) VALUES (%s, %s)"
-    cursor.execute(insert_query, (name, manager_id))
-
-    # 플레이스번호 연동
-    update_query = """
-        UPDATE businesses b
-        JOIN keywords k ON b.name = k.상호명
-        SET b.플레이스번호 = k.플레이스번호
-        WHERE b.name = %s
-    """
-    cursor.execute(update_query, (name,))
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({'success': 'Business added successfully!'})
-
-
-# def create_admin_user():
-#     username = "root"
-#     plain_password = "1234"  # 실제 비밀번호
-#     hashed_password = bcrypt.generate_password_hash(plain_password).decode('utf-8')
-#
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
-#     cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-#                    (username, hashed_password, 'admin'))
-#     conn.commit()
-#     cursor.close()
-#     conn.close()
-#
-#     print("Admin user created successfully.")
-
-@app.route('/check_hash', methods=['GET'])
-def check_hash():
-    plain_password = "1234"  # 원래 비밀번호
-    hashed_password = "$2b$12$ZuGXrXZF4CJScpFKacQVRenXEVpqS/4J/keimfTPn1soOLl5IFEU2"  # 해시된 비밀번호
-    if bcrypt.check_password_hash(hashed_password, plain_password):
-        return "Password is valid!"
-    else:
-        return "Invalid password."
-
-
-# Admin Dashboard 라우트
-@app.route('/admin_dashboard')
-@login_required
-def admin_dashboard():
-    if current_user.role != 'admin':  # 관리자가 아닌 경우
-        return redirect(url_for('login'))  # 로그인 페이지로 리다이렉트
-    data = fetch_data_from_db()  # 데이터베이스에서 데이터 가져오기
-    return render_template('admin_dashboard.html', data=data)
-
-
-
-@app.route('/check_rank', methods=['POST'])
-def check_rank():
-    return jsonify({'message': 'Rank checked successfully'})
-
-# 담당자 등록
-# def register_managers():
-#     managers = [
-#         {'username': '오경주', 'password': 'password1', 'role': 'manager'},
-#         {'username': '한시은', 'password': 'password2', 'role': 'manager'},
-#         {'username': '박찬규', 'password': 'password3', 'role': 'manager'},
-#         {'username': '김주성', 'password': 'password4', 'role': 'manager'},
-#         {'username': '서지우', 'password': 'password5', 'role': 'manager'},
-#         {'username': '심재진', 'password': 'password6', 'role': 'manager'},
-#     ]
-#
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
-#
-#     for manager in managers:
-#         hashed_password = bcrypt.generate_password_hash(manager['password']).decode('utf-8')
-#         cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-#                        (manager['username'], hashed_password, manager['role']))
-#
-#     conn.commit()
-#     cursor.close()
-#     conn.close()
-#
-#     print("All managers have been registered successfully.")
-#
-# # 등록 함수 호출
-# register_managers()
-
-
-# @app.route('/test_password', methods=['GET'])
-# def test_password():
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor(dictionary=True)
-#     cursor.execute("SELECT password FROM users WHERE username = '오경주'")
-#     user = cursor.fetchone()
-#     cursor.close()
-#     conn.close()
-#
-#     # '오경주'라는 텍스트가 데이터베이스에 저장된 해싱된 비밀번호와 일치하는지 확인
-#     if bcrypt.check_password_hash(user['password'], '오경주'):
-#         return "Password is valid!"
-#     else:
-#         return "Invalid password."
-
-# @app.route('/reset_password', methods=['GET'])
-# def reset_password():
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
-#
-#     # 새로운 비밀번호를 해싱
-#     hashed_password = bcrypt.generate_password_hash('오경주').decode('utf-8')
-#
-#     # 비밀번호를 다시 업데이트
-#     cursor.execute("UPDATE users SET password = %s WHERE username = '오경주'", (hashed_password,))
-#     conn.commit()
-#
-#     cursor.close()
-#     conn.close()
-#
-#     return "Password reset successfully!"
 
 
 if __name__ == '__main__':

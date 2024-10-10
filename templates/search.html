@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Place Rank Search</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        /* 상단 메뉴바 스타일 */
+        .navbar-custom {
+            background-color: #343a40;  /* 배경색 설정 */
+        }
+
+        .navbar-custom .nav-link {
+            color: white;  /* 링크 색상 */
+        }
+
+        .navbar-custom .nav-link:hover {
+            background-color: #495057;  /* hover 시 배경색 변경 */
+        }
+
+        /* 폼과 결과를 중앙에 정렬하기 위한 스타일 */
+        .center-content {
+            height: 100vh; /* 화면 전체 높이 */
+            display: flex;
+            justify-content: center; /* 가로 중앙 정렬 */
+            align-items: center; /* 세로 중앙 정렬 */
+        }
+
+        .card {
+            width: 100%;
+            max-width: 500px; /* 최대 너비 설정 */
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-text {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 상단 네비게이션 바 -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">순위체크</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/search">실시간 체크</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 중앙에 정렬된 콘텐츠 영역 -->
+    <div class="center-content">
+        <div class="card">
+            <!-- 헤더 -->
+            <div class="text-center mb-4">
+                <h1 class="header-text">실시간 체크</h1>
+            </div>
+
+            <!-- 검색 폼 -->
+            <form id="rankForm">
+                <div class="mb-3">
+                    <label for="placeName" class="form-label">상호명</label>
+                    <input type="text" class="form-control" id="placeName" required>
+                </div>
+                <div class="mb-3">
+                    <label for="placeId" class="form-label">플레이스번호</label>
+                    <input type="text" class="form-control" id="placeId" required>
+                </div>
+                <div class="mb-3">
+                    <label for="keyword" class="form-label">키워드</label>
+                    <input type="text" class="form-control" id="keyword" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">조회하기</button>
+            </form>
+
+            <!-- 결과 메시지 -->
+            <div id="resultMessage" class="mt-4 text-center"></div>
+        </div>
+    </div>
+
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.getElementById('rankForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const placeName = document.getElementById('placeName').value;
+            const placeId = document.getElementById('placeId').value;
+            const keyword = document.getElementById('keyword').value;
+
+            fetch('/get_rank', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    place_name: placeName,
+                    place_id: placeId,
+                    keyword: keyword
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || '조회 실패');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                const resultDiv = document.getElementById('resultMessage');
+                if (data.rank) {
+                    resultDiv.textContent = `'${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.`;
+                } else {
+                    // SweetAlert2로 오류 메시지 표시
+                    Swal.fire({
+                        text: data.error,
+                        showConfirmButton: true,
+                        confirmButtonText: '확인',
+                        timer: 3000  // 3초 후 자동 닫힘
+                    });
+                }
+            })
+            .catch(error => {
+                // SweetAlert2로 조회 실패 시 간단한 팝업 표시
+                Swal.fire({
+                    text: error.message || '순위가 110순위권 밖입니다.',
+                    showConfirmButton: true,
+                    confirmButtonText: '확인',
+                    timer: 3000  // 3초 후 자동 닫힘
+                });
+            });
+        });
+    </script>
+</body>
+</html>
