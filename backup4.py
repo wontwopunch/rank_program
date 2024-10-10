@@ -589,20 +589,19 @@ def start_crawling_and_update_db():
                     if row['최고순위'] is None or 최고순위 == 0 or rank < 최고순위:
                         최고순위 = rank
 
-                    # 변동이력 계산 (최초순위와 현재순위를 합산하여 저장)
+                    # 변동이력 계산 (정수 값으로 계산)
                     최초순위 = int(row['최초순위']) if row['최초순위'] is not None and row['최초순위'] != '' else 0
-                    현재순위 = rank
-                    변동이력 = 최초순위 + 현재순위  # 최초순위와 현재순위를 합산
-                    변동이력_str = f"{변동이력}"  # 변동이력을 문자열로 변환
+                    변동이력 = 최초순위 - rank  # 최초순위와 현재 순위 비교
+                    변동이력_str = f"{변동이력}" if 변동이력 != 0 else "0"  # 변동이 0일 경우도 처리
 
                     now = datetime.now().strftime('%Y-%m-%d %H:%M')  # 현재 시간
 
                     # DB 업데이트
-                    cursor.execute(""" 
+                    cursor.execute("""
                         UPDATE keywords 
                         SET 최고순위 = %s, 현재순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
                         WHERE id = %s
-                    """, (최고순위, 현재순위, 변동이력_str, now, category, blog_review, visitor_review, index))
+                    """, (최고순위, rank, 변동이력_str, now, category, blog_review, visitor_review, index))
 
                     print(f"DB 업데이트 완료: {index}")
 
