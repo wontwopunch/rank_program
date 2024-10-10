@@ -15,13 +15,13 @@ from flask import Flask, render_template, redirect, url_for, flash, request, ses
 from flask_bcrypt import Bcrypt  # 비밀번호 해싱 및 검증을 위한 Bcrypt 모듈
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required  # 사용자 세션 관리를 위한 Flask-Login
 
-
 import time  # 시간 지연 처리
 import requests  # HTTP 요청 처리
 import pandas as pd  # 데이터 처리 (주로 DataFrame 사용)
 # from sqlalchemy import create_engine  # SQLAlchemy 엔진을 사용하여 MySQL 연동
 import os  # 운영 체제와의 상호작용 (파일 경로 등)
 from datetime import timedelta
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.secret_key = 'your_unique_secret_key'  # 고유한 비밀 키 설정
@@ -35,13 +35,31 @@ bcrypt = Bcrypt(app)
 # ChromeDriver 경로 (프로젝트 내)
 chrome_driver_path = 'webdriver/chromedriver.exe'
 
-# MySQL 연결 설정
+# 환경 변수에서 JAWSDB_URL 가져오기
+db_url = os.getenv('JAWSDB_URL')
+url = urlparse(db_url)
+
+# JawsDB MySQL 연결 설정
 db_config = {
-    'user': 'root',
-    'password': '1234',
-    'host': 'localhost',
-    'database': 'your_database_name'
+    'user': url.username,
+    'password': url.password,
+    'host': url.hostname,
+    'database': url.path[1:],  # URL 경로에서 '/'를 제거한 데이터베이스 이름
+    'port': url.port
 }
+
+# MySQL 연결 테스트 (연결 확인)
+def test_db_connection():
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute("SHOW TABLES;")
+        result = cursor.fetchall()
+        print("Database connected. Tables:", result)
+        cursor.close()
+        conn.close()
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
 
 # 로그인 관리 설정
 login_manager = LoginManager()
@@ -1085,4 +1103,5 @@ def check_rank():
 
 
 if __name__ == '__main__':
+    test_db_connection()  # MySQL 연결 확인
     app.run(debug=True)
