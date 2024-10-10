@@ -36,7 +36,7 @@ bcrypt = Bcrypt(app)
 chrome_driver_path = 'webdriver/chromedriver.exe'
 
 # 환경 변수에서 JAWSDB_URL 가져오기
-db_url = os.getenv('JAWSDB_URL')
+db_url = "mysql://hau6sieypomd6xs2:nghsejnpxnillvft@jsk3f4rbvp8ayd7w.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/fyzws9bbv09772be"
 url = urlparse(db_url)
 
 # JawsDB MySQL 연결 설정
