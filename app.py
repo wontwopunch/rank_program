@@ -32,8 +32,20 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
 # Bcrypt 인스턴스 생성
 bcrypt = Bcrypt(app)
 
+chrome_options = Options()
+chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")  # Heroku에 설치된 Google Chrome 경로
+chrome_options.add_argument("--headless")  # Headless 모드로 실행
+chrome_options.add_argument("--disable-dev-shm-usage")  # /dev/shm 사용 안함 (메모리 부족 방지)
+chrome_options.add_argument("--no-sandbox")  # 샌드박스 모드 비활성화
+
+# Heroku 환경에서의 ChromeDriver 경로
+chrome_driver_path = os.environ.get("CHROMEDRIVER_PATH")
+
+# Selenium WebDriver 설정
+driver = webdriver.Chrome(executable_path=chrome_driver_path, options=chrome_options)
+
 # ChromeDriver 경로 (프로젝트 내)
-chrome_driver_path = 'webdriver/chromedriver.exe'
+# chrome_driver_path = 'webdriver/chromedriver.exe'
 
 # 환경 변수에서 JAWSDB_URL 가져오기
 db_url = "mysql://hau6sieypomd6xs2:nghsejnpxnillvft@jsk3f4rbvp8ayd7w.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/fyzws9bbv09772be"
