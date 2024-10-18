@@ -35,6 +35,19 @@
             font-weight: bold;
             color: #333;
         }
+
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -57,6 +70,14 @@
                         <a class="nav-link" href="/manager_management">영업자 관리</a>
                     </li>
                     {% endif %}
+                </ul>
+                <!-- 로그아웃 버튼 추가 -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <form action="/logout" method="POST">
+                            <button type="submit" class="logout-btn">로그아웃</button>
+                        </form>
+                    </li>
                 </ul>
             </div>
         </div>

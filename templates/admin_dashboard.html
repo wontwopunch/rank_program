@@ -98,19 +98,19 @@
             background-color: #c82333;
         }
 
-            .btn-custom-danger {
-        background-color: #dc3545; /* Bootstrap의 btn-danger 색상 */
-        color: white;
-        border: none;
-        padding: 2px 5px;
-        height: 30px;
-        width: 60px;
-        font-size: 10px;
-    }
+        .btn-custom-danger {
+            background-color: #dc3545; /* Bootstrap의 btn-danger 색상 */
+            color: white;
+            border: none;
+            padding: 2px 5px;
+            height: 30px;
+            width: 60px;
+            font-size: 10px;
+        }
 
-    .btn-custom-danger:hover {
-        background-color: #c82333; /* Hover 시 어두운 빨간색 */
-    }
+        .btn-custom-danger:hover {
+            background-color: #c82333; /* Hover 시 어두운 빨간색 */
+        }
     </style>
 </head>
 <body>
@@ -131,7 +131,7 @@
                     <a class="nav-link" href="/search">실시간 체크</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/manager_management">영업자관리</a>
+                    <a class="nav-link" href="/manager_management">담당자관리</a>
                 </li>
             </ul>
             <!-- 로그아웃 버튼 추가 -->
@@ -209,11 +209,11 @@
                     <td>{{ row['방문자리뷰'] }}</td>
                     <td>{{ row['최신일자'] }}</td>
                     <td>
-                        <button class="btn btn-primary" data-id="{{ row['id'] }}" onclick="fetchData(this)">조회</button>
+                        <button class="btn btn-primary" data-id="{{ row['id'] }}" data-keyword="{{ row['키워드'] }}" data-place-id="{{ row['플레이스번호'] }}" data-place-name="{{ row['상호명'] }}" onclick="fetchData(this)">조회</button>
                     </td>
-<!--                    <td>-->
-<!--                        <button class="btn btn-danger" data-id="{{ row['id'] }}" onclick="deleteKeyword(this)">삭제</button>-->
-<!--                    </td>-->
+                    <td>
+                        <button class="btn btn-danger" data-id="{{ row['id'] }}" onclick="deleteKeyword(this)">삭제</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -321,7 +321,7 @@
         });
     }
 
-     // 키워드 삭제 함수
+    // 키워드 삭제 함수
     function deleteKeyword(button) {
         const keywordId = button.getAttribute('data-id');
 
@@ -351,41 +351,86 @@
         });
     }
 
+    let newRowAdded = false;  // 새로운 행이 추가되었는지 여부를 추적하는 변수
+    let newRow = null;  // 새로 추가된 행을 저장하는 변수
 
     // + 버튼 기능 (새로운 행 추가)
-    document.getElementById('addRowBtn').addEventListener('click', function() {
-        const table = document.getElementById('keyword-table').getElementsByTagName('tbody')[0];
-        const newRow = table.insertRow(0);
+    document.getElementById('addRowBtn').addEventListener('click', function () {
+        if (newRowAdded) return;  // 이미 행이 추가된 경우 중복으로 추가하지 않음
 
+        const table = document.getElementById('keyword-table').getElementsByTagName('tbody')[0];
+        newRow = table.insertRow(0);
+
+        // 새로운 행에 추가할 필드들 (상호명, 플레이스번호, 키워드, 담당자)
         for (let i = 0; i < 15; i++) {
             const cell = newRow.insertCell(i);
-            if (i === 14) {
+
+            if (i === 2) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                input.placeholder = '상호명 입력';
+                cell.appendChild(input);
+            } else if (i === 3) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                input.placeholder = '플레이스번호 입력';
+                cell.appendChild(input);
+            } else if (i === 4) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                input.placeholder = '키워드 입력';
+                cell.appendChild(input);
+            } else if (i === 9) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                input.placeholder = '담당자 입력';
+                cell.appendChild(input);
+            } else if (i === 14) {
                 const saveButton = document.createElement('button');
                 saveButton.className = 'btn btn-success';
                 saveButton.textContent = '저장';
-                saveButton.onclick = function() {
+                saveButton.onclick = function () {
                     saveNewRow(this);
                 };
                 cell.appendChild(saveButton);
             } else {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control form-control-sm';
-                cell.appendChild(input);
+                cell.textContent = '';
             }
         }
+
+        newRowAdded = true;  // 행이 추가된 상태로 설정
     });
 
+    // HTML 페이지의 아무 곳을 클릭하면 새로운 행이 사라지도록 처리
+    document.addEventListener('click', function (event) {
+        const table = document.getElementById('keyword-table');
+
+        // 클릭된 요소가 테이블 안에 있으면 행을 삭제하지 않음
+        if (table.contains(event.target) || event.target.id === 'addRowBtn') {
+            return;
+        }
+
+        // 새로 추가된 행이 있고, 클릭된 곳이 테이블 밖이면 삭제
+        if (newRowAdded && newRow) {
+            newRow.remove();  // 추가된 행을 삭제
+            newRowAdded = false;  // 행이 추가된 상태를 초기화
+            newRow = null;  // 새로운 행을 null로 초기화
+        }
+    }, true);
+
+    // 새로운 행 저장 함수
     function saveNewRow(button) {
         const row = button.parentNode.parentNode;
         const cells = row.getElementsByTagName('td');
         const data = {
-            date: cells[1].getElementsByTagName('input')[0].value,
             place_name: cells[2].getElementsByTagName('input')[0].value,
             place_id: cells[3].getElementsByTagName('input')[0].value,
             keyword: cells[4].getElementsByTagName('input')[0].value,
-            manager: cells[9].getElementsByTagName('input')[0].value,
-            current_rank: cells[8].getElementsByTagName('input')[0].value
+            manager: cells[9].getElementsByTagName('input')[0].value
         };
 
         fetch('/add_row', {

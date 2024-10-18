@@ -5,11 +5,13 @@ from selenium.webdriver.common.action_chains import ActionChains  # Selenium에�
 from selenium.webdriver.common.keys import Keys  # 키보드 동작 제어
 from selenium.common.exceptions import NoSuchElementException  # Selenium에서 요소를 찾지 못했을 때 발생하는 예외 처리
 from selenium import webdriver  # 웹 드라이버를 실행하기 위한 모듈
-from selenium.webdriver.chrome.service import Service  # ChromeDriver 서비스 관리
-from selenium.webdriver.chrome.options import Options  # Chrome 옵션 설정
+from selenium.webdriver.edge.service import Service  # EdgeDriver 서비스 관리
+from selenium.webdriver.edge.options import Options  # Edge 옵션 설정
 from selenium.webdriver.common.by import By  # 요소 찾기를 위한 By 클래스
 from selenium.webdriver.support.ui import WebDriverWait  # 요소 로딩을 대기하기 위한 모듈
 from selenium.webdriver.support import expected_conditions as EC  # 조건을 만족할 때까지 대기
+from selenium.common.exceptions import TimeoutException
+
 
 from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify  # Flask 웹 프레임워크 기본 모듈
 from flask_bcrypt import Bcrypt  # 비밀번호 해싱 및 검증을 위한 Bcrypt 모듈
@@ -26,27 +28,22 @@ from urllib.parse import urlparse
 app = Flask(__name__)
 app.secret_key = 'your_unique_secret_key'  # 고유한 비밀 키 설정
 
-# 세션 유지 기간 설정 (선택 사항)
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
-
 # Bcrypt 인스턴스 생성
 bcrypt = Bcrypt(app)
 
-# ChromeDriver 경로 (프로젝트 내)
-chrome_driver_path = 'webdriver/chromedriver.exe'
+edge_driver_path = 'webdriver/msedgedriver.exe'
 
-# 환경 변수에서 JAWSDB_URL 가져오기
-db_url = "mysql://hau6sieypomd6xs2:nghsejnpxnillvft@jsk3f4rbvp8ayd7w.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/fyzws9bbv09772be"
-url = urlparse(db_url)
-
-# JawsDB MySQL 연결 설정
+# MySQL 연결 설정
 db_config = {
-    'user': url.username,
-    'password': url.password,
-    'host': url.hostname,
-    'database': url.path[1:],  # URL 경로에서 '/'를 제거한 데이터베이스 이름
-    'port': url.port
+    'user': 'root',
+    'password': '1234',
+    'host': 'localhost',
+    'database': 'your_database_name'
 }
+
+# 로그인 관리 설정
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 # MySQL 연결 테스트 (연결 확인)
 def test_db_connection():
@@ -55,7 +52,7 @@ def test_db_connection():
         cursor = conn.cursor()
         cursor.execute("SHOW TABLES;")
         result = cursor.fetchall()
-        print("Database connected. Tables:", result)
+        # print("Database connected. Tables:", result)
         cursor.close()
         conn.close()
     except mysql.connector.Error as err:
@@ -350,10 +347,10 @@ driver = None
 def setup_driver():
     global driver
     if driver is None:  # 드라이버가 없을 때만 생성
-        service = Service(executable_path=chrome_driver_path)
+        service = Service(executable_path=edge_driver_path)
         options = Options()
         options.add_argument('--ignore-certificate-errors')
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Edge(service=service, options=options)
     return driver
 
 
@@ -365,53 +362,28 @@ def close_driver():
 
 
 # 순위 찾기 함수
+# 순위 찾기 함수 개선 (WebDriverWait 추가)
 def find_rank(index, keyword, place_id):
     global driver  # 드라이버 변수를 글로벌로 선언
 
     if driver is None:  # 드라이버가 None일 경우 새로 생성
-        service = Service(executable_path=chrome_driver_path)
+        service = Service(executable_path=edge_driver_path)
         options = Options()
         options.add_argument('--ignore-certificate-errors')
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Edge(service=service, options=options)
 
     try:
         search_link = f"https://m.search.naver.com/search.naver?sm=mtp_hty.top&where=m&query={keyword}"
         driver.get(search_link)
         place_id_str = str(place_id)
-        time.sleep(5)
 
-        # 1. 리스트에서 더보기 없이 순위를 찾는 경우
+        # 리스트에서 더보기 없이 순위를 찾는 경우
         no_more_button_selector = "#loc-main-section-root > div > div.rdX0R > ul > li"
-        list_items = driver.find_elements(By.CSS_SELECTOR, no_more_button_selector)
-        if list_items:
-            print(f"더보기 없이 리스트에서 {place_id_str}를 찾습니다.")
-            rank = 1
-            for item in list_items:
-                try:
-                    link = item.find_element(By.CSS_SELECTOR, "a")
-                    href = link.get_attribute("href")
-                    if place_id_str in href:
-                        print(f"{place_id_str}를 포함한 링크 발견: {href}, 현재 순위: {rank}")
-                        return rank  # 순위 반환
-                except Exception as e:
-                    print(f"리스트 항목에서 링크 찾기 오류: {e}")
-                rank += 1
-
-        # 2. 첫 번째 더보기 버튼 클릭 후 순위를 찾는 경우
         try:
-            driver.execute_script("window.scrollBy(0, 400);")  # 300px 정도 아래로 스크롤
-            print("스크롤을 400px 내렸습니다.")
-            click_more_button(driver, "a.YORrF span.Jtn42")  # 기존 CSS 선택자
-            print("첫 번째 더보기 버튼 클릭됨 (a.YORrF span.Jtn42).")
-            time.sleep(5)
-
-            if not driver.find_elements(By.CSS_SELECTOR, "a.YORrF span.Jtn42"):
-                click_more_button(driver, "a.FtXwJ span.PNozS")  # 새로운 선택자 사용
-                print("첫 번째 더보기 버튼 클릭됨 (a.FtXwJ span.PNozS).")
-                time.sleep(5)
-
-            list_items = driver.find_elements(By.CSS_SELECTOR,
-                                              "#place-main-section-root > div.place_section.Owktn > div.rdX0R.POx9H > ul > li")
+            list_items = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, no_more_button_selector))
+            )
+            # print(f"더보기 없이 리스트에서 {place_id_str}를 찾습니다.")
             rank = 1
             for item in list_items:
                 try:
@@ -423,16 +395,26 @@ def find_rank(index, keyword, place_id):
                 except Exception as e:
                     print(f"리스트 항목에서 링크 찾기 오류: {e}")
                 rank += 1
-        except Exception as e:
-            print(f"첫 번째 더보기 버튼 없음 또는 클릭 실패: {e}")
+        except TimeoutException:
+            print(f"리스트에서 {place_id_str}를 찾지 못했습니다.")
 
-        # 3. 두 번째 더보기 버튼 클릭 후 순위를 찾는 경우
+        # 첫 번째 더보기 버튼 클릭 후 순위를 찾는 경우
         try:
-            click_more_button(driver, "a.cf8PL")
-            print("두 번째 더보기 버튼 클릭됨.")
-            time.sleep(5)
+            driver.execute_script("window.scrollBy(0, 400);")  # 스크롤 아래로
+            # print("스크롤을 400px 내렸습니다.")
 
-            list_items = driver.find_elements(By.CSS_SELECTOR, "#_list_scroll_container > div > div > div.place_business_list_wrapper > ul > li")
+            # WebDriverWait 사용하여 더보기 버튼 대기
+            more_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.YORrF span.Jtn42"))
+            )
+            more_button.click()  # 더보기 버튼 클릭
+            # print("첫 번째 더보기 버튼 클릭됨.")
+
+            # 리스트에서 순위 확인
+            list_items = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, "#place-main-section-root > div.place_section.Owktn > div.rdX0R.POx9H > ul > li"))
+            )
             rank = 1
             for item in list_items:
                 try:
@@ -444,10 +426,36 @@ def find_rank(index, keyword, place_id):
                 except Exception as e:
                     print(f"리스트 항목에서 링크 찾기 오류: {e}")
                 rank += 1
-        except Exception as e:
-            print(f"두 번째 더보기 버튼 없음 또는 클릭 실패: {e}")
+        except TimeoutException:
+            print("첫 번째 더보기 버튼 클릭 실패.")
 
-        print(f"{keyword}에서 {place_id}의 순위를 찾을 수 없습니다.")
+        # 두 번째 더보기 버튼 클릭 후 순위를 찾는 경우
+        try:
+            more_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.cf8PL"))
+            )
+            more_button.click()
+            # print("두 번째 더보기 버튼 클릭됨.")
+
+            list_items = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR,
+                                                     "#_list_scroll_container > div > div > div.place_business_list_wrapper > ul > li"))
+            )
+            rank = 1
+            for item in list_items:
+                try:
+                    link = item.find_element(By.CSS_SELECTOR, "a")
+                    href = link.get_attribute("href")
+                    if place_id_str in href:
+                        # print(f"{place_id_str}를 포함한 링크 발견: {href}, 현재 순위: {rank}")
+                        return rank  # 순위 반환
+                except Exception as e:
+                    print(f"리스트 항목에서 링크 찾기 오류: {e}")
+                rank += 1
+        except TimeoutException:
+            print("두 번째 더보기 버튼 클릭 실패.")
+
+        # print(f"{keyword}에서 {place_id}의 순위를 찾을 수 없습니다.")
         return None
 
     except Exception as e:
@@ -463,11 +471,11 @@ def find_rank(index, keyword, place_id):
 # 카테고리 크롤링 함수
 def get_category(driver, place_id):
     if driver is None:
-        print("Driver is None, setting up driver again.")
+        # print("Driver is None, setting up driver again.")
         driver = setup_driver()  # 드라이버 재설정
 
     try:
-        print(f"카테고리 크롤링을 위해 URL 접근 중: https://m.place.naver.com/nailshop/{place_id}/home?entry=pll")
+        # print(f"카테고리 크롤링을 위해 URL 접근 중: https://m.place.naver.com/nailshop/{place_id}/home?entry=pll")
         category_url = f"https://m.place.naver.com/nailshop/{place_id}/home?entry=pll"
         driver.get(category_url)
         time.sleep(5)
@@ -475,15 +483,15 @@ def get_category(driver, place_id):
         # 카테고리 요소 찾기
         category_element = driver.find_element(By.CSS_SELECTOR, 'span.lnJFt')
         category = category_element.text
-        print(f"카테고리 발견: {category}")
+        # print(f"카테고리 발견: {category}")
         return category
 
     except NoSuchElementException:
-        print(f"카테고리를 찾을 수 없습니다. '미정'으로 설정됩니다. place_id: {place_id}")
+        # print(f"카테고리를 찾을 수 없습니다. '미정'으로 설정됩니다. place_id: {place_id}")
         return "미정"
 
     except Exception as e:
-        print(f"카테고리 로직에서 오류 발생: {e}")
+        # print(f"카테고리 로직에서 오류 발생: {e}")
         return "미정"
 
 
@@ -534,15 +542,15 @@ def get_reviews(place_id):
 def find_rank_and_reviews(index, keyword, place_id):
     rank = find_rank(index, keyword, place_id)
     if rank is not None:
-        print(f"순위 {rank}를 찾았습니다. 이제 카테고리와 리뷰를 크롤링합니다.")
+        # print(f"순위 {rank}를 찾았습니다. 이제 카테고리와 리뷰를 크롤링합니다.")
 
         # 카테고리 크롤링
         category = get_category(driver, place_id)
-        print(f"카테고리: {category}")
+        # print(f"카테고리: {category}")
 
         # 리뷰 크롤링
         blog_review, visitor_review = get_reviews(place_id)
-        print(f"블로그 리뷰: {blog_review}, 방문자 리뷰: {visitor_review}")
+        # print(f"블로그 리뷰: {blog_review}, 방문자 리뷰: {visitor_review}")
 
         return rank, category, blog_review, visitor_review, index  # 5개의 값 반환
     else:
@@ -559,73 +567,71 @@ def click_more_button(driver, selector):
         print(f"더보기 버튼 {selector}를 찾을 수 없습니다.")
 
 
-# 순차적으로 크롤링 및 DB 업데이트 함수
 def start_crawling_and_update_db():
-    conn = get_db_connection()  # DB 연결
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM keywords WHERE id IS NOT NULL")
-    rows = cursor.fetchall()
+        conn = get_db_connection()  # DB 연결
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM keywords WHERE id IS NOT NULL")
+        rows = cursor.fetchall()
 
-    try:
-        for row in rows:
-            try:
-                # 반환값을 5개로 받도록 수정 (rank, category, blog_review, visitor_review, index)
-                rank, category, blog_review, visitor_review, index = find_rank_and_reviews(row['id'], row['키워드'], row['플레이스번호'])
+        try:
+            for row in rows:
+                try:
+                    # 순위와 카테고리, 리뷰 정보를 가져옴
+                    rank, category, blog_review, visitor_review, index = find_rank_and_reviews(row['id'], row['키워드'],
+                                                                                               row['플레이스번호'])
 
-                if rank is not None:
-                    # 데이터 재조회
-                    cursor.execute("SELECT * FROM keywords WHERE id = %s", (index,))
-                    row = cursor.fetchone()
+                    if rank is not None:
+                        # 데이터 재조회
+                        cursor.execute("SELECT * FROM keywords WHERE id = %s", (index,))
+                        row = cursor.fetchone()
 
-                    # 문자열로 된 순위 값을 정수로 변환
-                    최고순위 = int(row['최고순위']) if row['최고순위'] is not None and row['최고순위'] != '' else 0
-                    rank = int(rank)
+                        # 최초순위가 없으면 최초순위를 설정
+                        if row['최초순위'] is None or row['최초순위'] == '':
+                            cursor.execute("UPDATE keywords SET 최초순위 = %s WHERE id = %s", (rank, index))
 
-                    # 최초순위 업데이트
-                    if row['최초순위'] is None or row['최초순위'] == '':
-                        cursor.execute("UPDATE keywords SET 최초순위 = %s WHERE id = %s", (rank, index))
+                        # 최고순위 업데이트
+                        최고순위 = int(row['최고순위']) if row['최고순위'] else 0
+                        rank = int(rank)
+                        if row['최고순위'] is None or 최고순위 == 0 or rank < 최고순위:
+                            최고순위 = rank
 
-                    # 최고순위 업데이트 (정수 값으로 비교)
-                    if row['최고순위'] is None or 최고순위 == 0 or rank < 최고순위:
-                        최고순위 = rank
+                        # 변동이력을 최초순위와 현재순위의 합으로 계산
+                        최초순위 = int(row['최초순위']) if row['최초순위'] else 0
+                        현재순위 = rank
+                        변동이력 = 최초순위 + 현재순위  # 최초순위와 현재순위의 합으로 변동이력 계산
 
-                    # 변동이력 계산 (최초순위와 현재순위를 합산하여 저장)
-                    최초순위 = int(row['최초순위']) if row['최초순위'] is not None and row['최초순위'] != '' else 0
-                    현재순위 = rank
-                    변동이력 = 최초순위 + 현재순위  # 최초순위와 현재순위를 합산
-                    변동이력_str = f"{변동이력}"  # 변동이력을 문자열로 변환
+                        now = datetime.now().strftime('%Y-%m-%d %H:%M')  # 현재 시간
 
-                    now = datetime.now().strftime('%Y-%m-%d %H:%M')  # 현재 시간
+                        # DB 업데이트
+                        cursor.execute("""
+                            UPDATE keywords 
+                            SET 최고순위 = %s, 현재순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
+                            WHERE id = %s
+                        """, (최고순위, 현재순위, 변동이력, now, category, blog_review, visitor_review, index))
 
-                    # DB 업데이트
-                    cursor.execute(""" 
-                        UPDATE keywords 
-                        SET 최고순위 = %s, 현재순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
-                        WHERE id = %s
-                    """, (최고순위, 현재순위, 변동이력_str, now, category, blog_review, visitor_review, index))
+                        # print(f"DB 업데이트 완료: {index}")
 
-                    print(f"DB 업데이트 완료: {index}")
+                    else:
+                        print(f"순위를 찾지 못함: index={index}")
 
-                else:
-                    print(f"순위를 찾지 못함: index={index}")
+                except Exception as e:
+                    print(f"DB 업데이트 중 오류 발생: {e}")
+                    conn.rollback()  # 오류 발생 시 해당 트랜잭션만 롤백
 
-            except Exception as e:
-                print(f"DB 업데이트 중 오류 발생: {e}")
-                conn.rollback()  # 오류 발생 시 해당 트랜잭션만 롤백
+            conn.commit()  # 모든 작업 완료 후 한 번에 커밋
 
-        conn.commit()  # 모든 작업 완료 후 한 번에 커밋
+        except Exception as e:
+            print(f"전체 처리 중 오류 발생: {e}")
+            conn.rollback()
 
-    except Exception as e:
-        print(f"전체 처리 중 오류 발생: {e}")
-        conn.rollback()
+        finally:
+            conn.close()  # 리소스 해제
 
-    finally:
-        conn.close()  # 리소스 해제
+        print("DB 업데이트 완료")
 
-    print("DB 업데이트 완료")
 
-    # 크롤링 후 엑셀 파일 저장 (백업용)
-    save_to_excel()
+        # 크롤링 후 엑셀 파일 저장 (백업용)
+        save_to_excel()
 
 
 def save_to_excel():
@@ -637,7 +643,7 @@ def save_to_excel():
 
         # 파일명에 날짜를 포함하여 백업 파일 생성
         now = datetime.now().strftime('%Y%m%d_%H%M%S')  # 날짜와 시간을 포함하여 고유한 파일명 생성
-        excel_path = f"C:/workspace/rank_program/data/keywords_backup_{now}.xlsx"
+        excel_path = f"C:/Users/PC/Desktop/backup/keywords_backup_{now}.xlsx"
 
         # 데이터프레임을 엑셀 파일로 저장
         df.to_excel(excel_path, index=False)
@@ -748,14 +754,6 @@ def fetch():
         # 데이터베이스 연결 종료
         conn.close()
 
-
-
-# 메인 페이지 렌더링
-# @app.route('/')
-# def index():
-#     data = fetch_data_from_db()  # MySQL에서 데이터를 가져옴
-#     return render_template('index.html', data=data)  # index.html 템플릿을 렌더링
-
 # 메인 페이지 렌더링
 @app.route('/')
 def main():
@@ -839,36 +837,6 @@ def delete_manager(manager_id):
         cursor.close()
         conn.close()
 
-# @app.route('/create_manager_account', methods=['POST'])
-# @login_required
-# def create_manager_account():
-#     if current_user.role != 'admin':
-#         return jsonify({'error': 'Unauthorized access'}), 403
-#
-#     data = request.get_json()
-#     manager_id = data.get('id')
-#     username = data.get('username')
-#     password = data.get('password')
-#
-#     if not username or not password:
-#         return jsonify({'error': 'Username and password required'}), 400
-#
-#     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-#
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
-#     try:
-#         # 특정 관리자의 계정을 업데이트 또는 새로 생성
-#         cursor.execute("UPDATE users SET username = %s, password = %s WHERE id = %s AND role = 'manager'",
-#                        (username, hashed_password, manager_id))
-#         conn.commit()
-#         return jsonify({'success': True})
-#     except Exception as e:
-#         conn.rollback()
-#         return jsonify({'error': str(e)})
-#     finally:
-#         cursor.close()
-#         conn.close()
 @app.route('/create_manager_account', methods=['POST'])
 @login_required
 def create_manager_account():
@@ -961,7 +929,7 @@ def add_row():
     manager = data.get('manager')
     current_rank = data.get('current_rank')
 
-    print(f"Received data: {data}")
+    # print(f"Received data: {data}")
 
     try:
         # MySQL 연결
@@ -1033,21 +1001,6 @@ def add_business():
     return jsonify({'success': 'Business added successfully!'})
 
 
-# def create_admin_user():
-#     username = "root"
-#     plain_password = "1234"  # 실제 비밀번호
-#     hashed_password = bcrypt.generate_password_hash(plain_password).decode('utf-8')
-#
-#     conn = mysql.connector.connect(**db_config)
-#     cursor = conn.cursor()
-#     cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-#                    (username, hashed_password, 'admin'))
-#     conn.commit()
-#     cursor.close()
-#     conn.close()
-#
-#     print("Admin user created successfully.")
-
 @app.route('/check_hash', methods=['GET'])
 def check_hash():
     plain_password = "1234"  # 원래 비밀번호
@@ -1065,7 +1018,6 @@ def admin_dashboard():
     if current_user.role != 'admin':  # 관리자가 아닌 경우
         return redirect(url_for('login'))  # 로그인 페이지로 리다이렉트
     data = fetch_data_from_db()  # 데이터베이스에서 데이터 가져오기
-    print(f"Loaded data: {data}")  # 디버깅용: 로드된 데이터 출력
     return render_template('admin_dashboard.html', data=data)
 
 
