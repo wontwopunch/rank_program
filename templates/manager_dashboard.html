@@ -309,6 +309,10 @@
         const placeId = button.getAttribute('data-place-id');
         const placeName = button.getAttribute('data-place-name');
 
+        // 조회 버튼 비활성화
+        button.disabled = true;
+        button.textContent = '조회 중...';
+
         fetch('/manager_fetch', {
             method: 'POST',
             headers: {
@@ -333,8 +337,14 @@
         .catch(error => {
             console.error('Error:', error);
             alert('오류가 발생했습니다.');
+        })
+        .finally(() => {
+            // 조회 버튼 다시 활성화
+            button.disabled = false;
+            button.textContent = '조회';
         });
     }
+
 
     // 삭제 버튼 기능
     function deleteKeyword(button) {

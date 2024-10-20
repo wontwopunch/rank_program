@@ -113,55 +113,67 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        document.getElementById('rankForm').addEventListener('submit', function (e) {
-            e.preventDefault();
+    document.getElementById('rankForm').addEventListener('submit', function (e) {
+        e.preventDefault();
 
-            const placeName = document.getElementById('placeName').value;
-            const placeId = document.getElementById('placeId').value;
-            const keyword = document.getElementById('keyword').value;
+        const placeName = document.getElementById('placeName').value;
+        const placeId = document.getElementById('placeId').value;
+        const keyword = document.getElementById('keyword').value;
 
-            fetch('/get_rank', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    place_name: placeName,
-                    place_id: placeId,
-                    keyword: keyword
-                })
+        const submitButton = e.target.querySelector('button[type="submit"]');
+
+        // 조회 버튼 비활성화 및 텍스트 변경
+        submitButton.disabled = true;
+        submitButton.textContent = '조회 중...';
+
+        fetch('/get_rank', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                place_name: placeName,
+                place_id: placeId,
+                keyword: keyword
             })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || '조회 실패');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                const resultDiv = document.getElementById('resultMessage');
-                if (data.rank) {
-                    resultDiv.innerHTML = `
-                        '${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.<br>
-                        카테고리: ${data.category}<br>
-                        블로그 리뷰: ${data.blog_review}개<br>
-                        방문자 리뷰: ${data.visitor_review}개`;
-                } else {
-                    resultDiv.innerHTML = `
-                        '${placeName}'의 '${keyword}' 검색 시 순위는 110순위권 밖입니다.<br>
-                        카테고리, 블로그 리뷰, 방문자 리뷰는 조회되지 않습니다.`;
-                }
-            })
-            .catch(error => {
-                Swal.fire({
-                    text: error.message || '순위가 110순위권 밖입니다.',
-                    showConfirmButton: true,
-                    confirmButtonText: '확인',
-                    timer: 3000
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || '조회 실패');
                 });
+            }
+            return response.json();
+        })
+        .then(data => {
+            const resultDiv = document.getElementById('resultMessage');
+            if (data.rank) {
+                resultDiv.innerHTML = `
+                    '${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.<br>
+                    카테고리: ${data.category}<br>
+                    블로그 리뷰: ${data.blog_review}개<br>
+                    방문자 리뷰: ${data.visitor_review}개`;
+            } else {
+                resultDiv.innerHTML = `
+                    '${placeName}'의 '${keyword}' 검색 시 순위는 110순위권 밖입니다.<br>
+                    카테고리, 블로그 리뷰, 방문자 리뷰는 조회되지 않습니다.`;
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                text: error.message || '순위가 110순위권 밖입니다.',
+                showConfirmButton: true,
+                confirmButtonText: '확인',
+                timer: 3000
             });
+        })
+        .finally(() => {
+            // 조회 버튼 다시 활성화 및 텍스트 복원
+            submitButton.disabled = false;
+            submitButton.textContent = '조회하기';
         });
+    });
+
     </script>
 </body>
 </html>
