@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By  # 요소 찾기를 위한 By 클래
 from selenium.webdriver.support.ui import WebDriverWait  # 요소 로딩을 대기하기 위한 모듈
 from selenium.webdriver.support import expected_conditions as EC  # 조건을 만족할 때까지 대기
 from selenium.common.exceptions import TimeoutException
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 
 from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify  # Flask 웹 프레임워크 기본 모듈
@@ -102,37 +103,6 @@ def load_user(user_id):
     cursor.close()
     conn.close()
     return User(user['id'], user['username'], user['password'], user['role']) if user else None
-
-
-# 로그인 페이지
-# 로그인 페이지
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     if request.method == 'POST':
-#         username = request.form.get('username')
-#         password = request.form.get('password')
-#
-#         # 데이터베이스에서 사용자 조회
-#         conn = mysql.connector.connect(**db_config)
-#         cursor = conn.cursor(dictionary=True)
-#         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-#         user = cursor.fetchone()
-#         cursor.close()
-#         conn.close()
-#
-#         if user and bcrypt.check_password_hash(user['password'], password):
-#             login_user(User(user['id'], user['username'], user['password'], user['role']), remember=True)
-#
-#             # 관리자 또는 매니저가 로그인 시 각각의 대시보드로 리다이렉트
-#             if user['role'] == 'admin':
-#                 return redirect(url_for('admin_dashboard'))
-#             elif user['role'] == 'manager':
-#                 return redirect(url_for('manager_dashboard', manager_id=user['id']))
-#         else:
-#             flash('Invalid username or password', 'danger')
-#             return redirect(url_for('login'))
-#
-#     return render_template('login.html')
 
 # 로그인 후 매니저 대시보드로 리디렉트
 # 로그인 페이지
@@ -338,19 +308,15 @@ def fetch_data_from_db():
     conn.close()
     return data
 
-
-
 # 글로벌 드라이버 변수
 driver = None
-
 
 def setup_driver():
     global driver
     if driver is None:  # 드라이버가 없을 때만 생성
-        service = Service(executable_path=edge_driver_path)
         options = Options()
-        options.add_argument('--ignore-certificate-errors')
-        driver = webdriver.Edge(service=service, options=options)
+        options.add_argument('--ignore-certificate-errors')  # 추가적인 옵션
+        driver = webdriver.Edge(EdgeChromiumDriverManager().install(), options=options)  # WebDriverManager 사용
     return driver
 
 
