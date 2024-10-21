@@ -36,7 +36,7 @@ app.secret_key = os.getenv('SECRET_KEY')
 # Bcrypt 인스턴스 생성
 bcrypt = Bcrypt(app)
 
-edge_driver_path = 'webdriver/msedgedriver.exe'
+edge_driver_path = os.getenv('EDGE_DRIVER_PATH')
 
 # .env 파일의 내용을 불러오기
 load_dotenv()
