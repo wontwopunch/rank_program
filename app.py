@@ -344,7 +344,6 @@ def close_driver():
 
 # 순위 찾기 함수
 # 순위 찾기 함수 개선 (WebDriverWait 추가)
-# 순위 찾기 함수 개선 (WebDriverWait 추가)
 def find_rank(index, keyword, place_id):
     global driver  # 드라이버 변수를 글로벌로 선언
 
@@ -367,7 +366,6 @@ def find_rank(index, keyword, place_id):
             list_items = WebDriverWait(driver, 20).until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, no_more_button_selector))
             )
-            # print(f"더보기 없이 리스트에서 {place_id_str}를 찾습니다.")
             rank = 1
             for item in list_items:
                 try:
@@ -382,67 +380,114 @@ def find_rank(index, keyword, place_id):
         except TimeoutException:
             print(f"리스트에서 {place_id_str}를 찾지 못했습니다.")
 
-        # 첫 번째 더보기 버튼 클릭 후 순위를 찾는 경우
-        try:
-            driver.execute_script("window.scrollBy(0, 400);")  # 스크롤 아래로
-            # print("스크롤을 400px 내렸습니다.")
+        # 첫 번째 더보기 버튼 처리
+        def find_first_more_button():
+            try:
+                # 첫 번째 더보기 버튼 (FtXwJ)
+                more_button = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.FtXwJ"))
+                )
+                driver.execute_script("arguments[0].click();", more_button)
+                print("첫 번째 더보기 버튼 클릭됨 (FtXwJ).")
+                return "FtXwJ"
+            except TimeoutException:
+                print("FtXwJ 셀렉터로 첫 번째 더보기 버튼을 찾지 못했습니다.")
 
-            # WebDriverWait 사용하여 더보기 버튼 대기
-            more_button = WebDriverWait(driver, 20).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.YORrF span.Jtn42"))
-            )
-            more_button.click()  # 더보기 버튼 클릭
-            sleep(5)
-            # print("첫 번째 더보기 버튼 클릭됨.")
+            try:
+                # 첫 번째 더보기 버튼 (YORrF)
+                more_button = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.YORrF span.Jtn42"))
+                )
+                driver.execute_script("arguments[0].click();", more_button)
+                print("첫 번째 더보기 버튼 클릭됨 (YORrF).")
+                return "YORrF"  # 첫 번째 더보기 버튼 타입 반환
+            except TimeoutException:
+                print("YORrF 셀렉터로 첫 번째 더보기 버튼을 찾지 못했습니다.")
 
-            # 리스트에서 순위 확인
-            list_items = WebDriverWait(driver, 20).until(
-                EC.presence_of_all_elements_located(
-                    (By.CSS_SELECTOR, "#place-main-section-root > div.place_section.Owktn > div.rdX0R.POx9H > ul > li"))
-            )
-            rank = 1
-            for item in list_items:
-                try:
-                    link = item.find_element(By.CSS_SELECTOR, "a")
-                    href = link.get_attribute("href")
-                    if place_id_str in href:
-                        print(f"{place_id_str}를 포함한 링크 발견: {href}, 현재 순위: {rank}")
-                        return rank  # 순위 반환
-                except Exception as e:
-                    print(f"리스트 항목에서 링크 찾기 오류: {e}")
-                rank += 1
-        except TimeoutException:
+            try:
+                # 첫 번째 더보기 버튼 (cf8PL)
+                more_button = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.cf8PL"))
+                )
+                driver.execute_script("arguments[0].click();", more_button)
+                print("첫 번째 더보기 버튼 클릭됨 (cf8PL).")
+                return "cf8PL"  # 첫 번째 더보기 버튼 타입 반환
+            except TimeoutException:
+                print("cf8PL 셀렉터로 첫 번째 더보기 버튼을 찾지 못했습니다.")
+
+            return None
+
+        # 첫 번째 더보기 버튼을 스크롤하면서 찾고 클릭
+        def scroll_and_find_first_button():
+            scroll_attempts = 0
+            while scroll_attempts < 20:  # 스크롤을 최대 5번까지 시도
+                driver.execute_script("window.scrollBy(0, 600);")  # 700픽셀씩 스크롤
+                print(f"스크롤을 {600 * (scroll_attempts + 1)} 내렸습니다.")
+
+                button_type = find_first_more_button()
+                if button_type:
+                    return button_type  # 버튼 타입 반환 ("YORrF" 또는 "cf8PL" 또는 "FtXwJ")
+                scroll_attempts += 1
+
+            return None
+
+        # 첫 번째 더보기 버튼을 찾음
+        first_button_type = scroll_and_find_first_button()
+
+        if not first_button_type:
             print("첫 번째 더보기 버튼 클릭 실패.")
+            return None
 
-        # 두 번째 더보기 버튼 클릭 후 순위를 찾는 경우
-        try:
-            more_button = WebDriverWait(driver, 20).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.cf8PL"))
-            )
-            more_button.click()
-            sleep(5)
-            # print("두 번째 더보기 버튼 클릭됨.")
+        # 첫 번째 더보기 버튼 클릭 후 업체 ID를 찾음
+        def find_place_id():
+            try:
+                list_items = WebDriverWait(driver, 20).until(
+                    EC.presence_of_all_elements_located(
+                        (By.CSS_SELECTOR, "#place-main-section-root > div.place_section.Owktn > div.rdX0R.POx9H > ul > li")
+                    )
+                )
+                rank = 1
+                for item in list_items:
+                    try:
+                        link = item.find_element(By.CSS_SELECTOR, "a")
+                        href = link.get_attribute("href")
+                        if place_id_str in href:
+                            print(f"{place_id_str}를 포함한 링크 발견: {href}, 현재 순위: {rank}")
+                            return rank  # 순위 반환
+                    except Exception as e:
+                        print(f"리스트 항목에서 링크 찾기 오류: {e}")
+                    rank += 1
+                return None
+            except TimeoutException:
+                print(f"업체 ID를 찾지 못했습니다.")
+                return None
 
-            list_items = WebDriverWait(driver, 20).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR,
-                                                     "#_list_scroll_container > div > div > div.place_business_list_wrapper > ul > li"))
-            )
-            rank = 1
-            for item in list_items:
-                try:
-                    link = item.find_element(By.CSS_SELECTOR, "a")
-                    href = link.get_attribute("href")
-                    if place_id_str in href:
-                        # print(f"{place_id_str}를 포함한 링크 발견: {href}, 현재 순위: {rank}")
-                        return rank  # 순위 반환
-                except Exception as e:
-                    print(f"리스트 항목에서 링크 찾기 오류: {e}")
-                rank += 1
-        except TimeoutException:
-            print("두 번째 더보기 버튼 클릭 실패.")
+        # 업체 ID 찾기 시도
+        rank = find_place_id()
 
-        # print(f"{keyword}에서 {place_id}의 순위를 찾을 수 없습니다.")
-        return None
+        if rank is not None:
+            return rank  # 업체 ID를 찾으면 순위 반환
+
+        # 업체 ID를 찾지 못했을 경우, 두 번째 더보기 버튼 클릭 시도
+        print("첫 번째 더보기 버튼 클릭 후 업체 ID를 찾지 못했습니다. 두 번째 더보기 버튼을 찾습니다.")
+
+        def find_second_more_button():
+            try:
+                more_button = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.cf8PL"))
+                )
+                driver.execute_script("arguments[0].click();", more_button)
+                print("두 번째 더보기 버튼 클릭됨.")
+                return True
+            except TimeoutException:
+                print("두 번째 더보기 버튼 클릭 실패.")
+                return False
+
+        # 두 번째 더보기 버튼 클릭 후 다시 업체 ID 찾기 시도
+        if find_second_more_button():
+            return find_place_id()  # 두 번째 더보기 버튼 클릭 후 업체 ID를 다시 찾음
+
+        return None  # 끝까지 못 찾으면 None 반환
 
     except Exception as e:
         print(f"오류 발생: {e}")
@@ -450,98 +495,105 @@ def find_rank(index, keyword, place_id):
 
     finally:
         if driver is not None:
+            sleep(5)
             driver.quit()  # 크롤링이 끝난 후 브라우저 종료
             driver = None  # 드라이버를 None으로 초기화
+
 
 
 # 카테고리 크롤링 함수
-def get_category(driver, place_id):
-    if driver is None:
-        # print("Driver is None, setting up driver again.")
-        driver = setup_driver()  # 드라이버 재설정
-
-    try:
-        # print(f"카테고리 크롤링을 위해 URL 접근 중: https://m.place.naver.com/nailshop/{place_id}/home?entry=pll")
-        category_url = f"https://m.place.naver.com/nailshop/{place_id}/home?entry=pll"
-        driver.get(category_url)
-        time.sleep(5)
-
-        # 카테고리 요소 찾기
-        category_element = driver.find_element(By.CSS_SELECTOR, 'span.lnJFt')
-        category = category_element.text
-        # print(f"카테고리 발견: {category}")
-        return category
-
-    except NoSuchElementException:
-        # print(f"카테고리를 찾을 수 없습니다. '미정'으로 설정됩니다. place_id: {place_id}")
-        return "미정"
-
-    except Exception as e:
-        # print(f"카테고리 로직에서 오류 발생: {e}")
-        return "미정"
-
-
-def get_reviews(place_id):
-    global driver  # 글로벌 드라이버 변수 사용
-
-    try:
-        # 리뷰 페이지로 이동
-        review_url = f"https://m.place.naver.com/nailshop/{place_id}/home?entry=pll"
-        driver.get(review_url)
-        time.sleep(5)  # 페이지 로딩 대기
-
-        visitor_review_count = 0
-        blog_review_count = 0
-
-        try:
-            # 첫 번째 케이스: 방문자 리뷰와 블로그 리뷰가 모두 있는 경우
-            review_spans = driver.find_elements(By.CSS_SELECTOR, 'div.zD5Nm > div.dAsGb > span')
-
-            first_review_text = review_spans[0].text
-            if '방문자' in first_review_text:
-                visitor_review_count = int(''.join(filter(str.isdigit, first_review_text)))
-                print(f"방문자 리뷰 발견: {visitor_review_count}")
-
-                if len(review_spans) > 1:
-                    second_review_text = review_spans[1].text
-                    blog_review_count = int(''.join(filter(str.isdigit, second_review_text)))
-                    print(f"블로그 리뷰 발견: {blog_review_count}")
-            else:
-                blog_review_count = int(''.join(filter(str.isdigit, first_review_text)))
-                print(f"블로그 리뷰 발견: {blog_review_count}")
-
-        except NoSuchElementException:
-            print("리뷰 요소를 찾을 수 없습니다. place_id={place_id}")
-
-        return blog_review_count, visitor_review_count  # 리뷰 수 반환
-
-    except Exception as e:
-        print(f"리뷰 크롤링 중 오류 발생: {e}")
-        return 0, 0  # 오류 발생 시 0으로 반환
-
-    finally:
-        if driver is not None:
-            driver.quit()  # 크롤링이 끝난 후 브라우저 종료
-            driver = None  # 드라이버를 None으로 초기화
-
-
+# def get_category(driver, place_id):
+#     if driver is None:
+#         # print("Driver is None, setting up driver again.")
+#         driver = setup_driver()  # 드라이버 재설정
+#
+#     try:
+#         # print(f"카테고리 크롤링을 위해 URL 접근 중: https://m.place.naver.com/nailshop/{place_id}/home?entry=pll")
+#         category_url = f"https://m.place.naver.com/nailshop/{place_id}/home?entry=pll"
+#         driver.get(category_url)
+#         time.sleep(5)
+#
+#         # 카테고리 요소 찾기
+#         category_element = driver.find_element(By.CSS_SELECTOR, 'span.lnJFt')
+#         category = category_element.text
+#         # print(f"카테고리 발견: {category}")
+#         return category
+#
+#     except NoSuchElementException:
+#         # print(f"카테고리를 찾을 수 없습니다. '미정'으로 설정됩니다. place_id: {place_id}")
+#         return "미정"
+#
+#     except Exception as e:
+#         # print(f"카테고리 로직에서 오류 발생: {e}")
+#         return "미정"
+#
+#
+# def get_reviews(place_id):
+#     global driver  # 글로벌 드라이버 변수 사용
+#
+#     try:
+#         # 리뷰 페이지로 이동
+#         review_url = f"https://m.place.naver.com/nailshop/{place_id}/home?entry=pll"
+#         driver.get(review_url)
+#         time.sleep(5)  # 페이지 로딩 대기
+#
+#         visitor_review_count = 0
+#         blog_review_count = 0
+#
+#         try:
+#             # 첫 번째 케이스: 방문자 리뷰와 블로그 리뷰가 모두 있는 경우
+#             review_spans = driver.find_elements(By.CSS_SELECTOR, 'div.zD5Nm > div.dAsGb > span')
+#
+#             if len(review_spans) > 0:
+#                 first_review_text = review_spans[0].text
+#
+#                 if '방문자' in first_review_text:
+#                     visitor_review_count = int(''.join(filter(str.isdigit, first_review_text)))
+#                     print(f"방문자 리뷰 발견: {visitor_review_count}")
+#
+#                     if len(review_spans) > 1:
+#                         second_review_text = review_spans[1].text
+#                         blog_review_count = int(''.join(filter(str.isdigit, second_review_text)))
+#                         print(f"블로그 리뷰 발견: {blog_review_count}")
+#                 else:
+#                     blog_review_count = int(''.join(filter(str.isdigit, first_review_text)))
+#                     print(f"블로그 리뷰 발견: {blog_review_count}")
+#             else:
+#                 print("리뷰 요소를 찾을 수 없습니다.")
+#         except NoSuchElementException:
+#             print(f"리뷰 요소를 찾을 수 없습니다. place_id={place_id}")
+#
+#         return blog_review_count, visitor_review_count  # 리뷰 수 반환
+#
+#     except Exception as e:
+#         print(f"리뷰 크롤링 중 오류 발생: {e}")
+#         return 0, 0  # 오류 발생 시 0으로 반환
+#
+#     finally:
+#         if driver is not None:
+#             driver.quit()  # 크롤링이 끝난 후 브라우저 종료
+#             driver = None  # 드라이버를 None으로 초기화
+#
+#
+#
 def find_rank_and_reviews(index, keyword, place_id):
     rank = find_rank(index, keyword, place_id)
     if rank is not None:
         # print(f"순위 {rank}를 찾았습니다. 이제 카테고리와 리뷰를 크롤링합니다.")
 
-        # 카테고리 크롤링
-        category = get_category(driver, place_id)
-        # print(f"카테고리: {category}")
+        # 주석 처리된 부분 (카테고리와 리뷰 크롤링)
+        # category = get_category(driver, place_id)
+        # blog_review, visitor_review = get_reviews(place_id)
 
-        # 리뷰 크롤링
-        blog_review, visitor_review = get_reviews(place_id)
-        # print(f"블로그 리뷰: {blog_review}, 방문자 리뷰: {visitor_review}")
+        # 임시로 카테고리와 리뷰 값을 고정값으로 설정
+        category = "보류"
+        blog_review = 0
+        visitor_review = 0
 
-        return rank, category, blog_review, visitor_review, index  # 5개의 값 반환
+        return rank, category, blog_review, visitor_review, index
     else:
         print("순위를 찾지 못했습니다.")
-    return None, '미정', 0, 0, index  # None일 때도 5개의 값 반환
+        return None, '미정', 0, 0, index
 
 
 def click_more_button(driver, selector):
@@ -653,73 +705,60 @@ scheduler = BackgroundScheduler()
 schedule_crawling_task(1, 0)
 
 # 순위 조회 후 업데이트 처리
+# 순위 조회 후 업데이트 처리
 @app.route('/fetch', methods=['POST'])
 def fetch():
     data = request.get_json()
 
-    # 'index' 값이 없는 경우 처리
     if 'index' not in data or not data['index']:
         return jsonify({'error': 'No index provided'}), 400
 
     try:
-        # 'index' 값을 정수로 변환
         index = int(data['index'])
     except ValueError:
         return jsonify({'error': 'Invalid index value'}), 400
 
-    # 나머지 입력 값 추출
     keyword = data.get('keyword')
     place_id = data.get('place_id')
     place_name = data.get('place_name')
 
-    # MySQL 연결
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # 데이터베이스에서 해당 'index' 값으로 검색
         cursor.execute("SELECT * FROM keywords WHERE id = %s", (index,))
         row = cursor.fetchone()
 
-        # 해당 'index' 값이 없을 때
         if row is None:
             return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404
 
-        # 순위, 카테고리, 리뷰 정보를 가져오는 함수 호출
         rank, category, blog_review, visitor_review, index = find_rank_and_reviews(index, keyword, place_id)
 
-        # 순위가 존재할 경우 처리
         if rank is not None:
-            # 최초 순위가 없으면 설정
             if row['최초순위'] is None or row['최초순위'] == '':
                 cursor.execute("UPDATE keywords SET 최초순위 = %s WHERE id = %s", (rank, index))
 
-            # 최고 순위를 업데이트 (현재 순위가 더 낮을 경우)
             최고순위 = int(row['최고순위']) if row['최고순위'] else 0
             rank = int(rank)
 
             if row['최고순위'] is None or 최고순위 == 0 or rank < 최고순위:
                 최고순위 = rank
 
-            # 변동 이력 계산
-            이전순위 = int(row['현재순위']) if row['현재순위'] is not None and row['현재순위'] != '' else rank
-            변동이력 = rank - 이전순위
-            변동이력_str = f"+{변동이력}" if 변동이력 > 0 else str(변동이력)
+            # 변동이력을 항상 최초순위와 현재순위의 합으로 설정
+            최초순위 = int(row['최초순위']) if row['최초순위'] else rank
+            변동이력 = 최초순위 + rank
+            변동이력_str = str(변동이력)
 
-            # 최신일자 업데이트
             now = datetime.now().strftime('%Y-%m-%d %H:%M')
 
-            # 현재순위, 최고순위, 변동이력, 최신일자, 카테고리, 리뷰 정보 업데이트
             cursor.execute("""
                 UPDATE keywords 
                 SET 현재순위 = %s, 최고순위 = %s, 변동이력 = %s, 최신일자 = %s, 카테고리 = %s, 블로그리뷰 = %s, 방문자리뷰 = %s 
                 WHERE id = %s
             """, (rank, 최고순위, 변동이력_str, now, category, blog_review, visitor_review, index))
 
-            # 변경 사항 커밋
             conn.commit()
 
-            # 업데이트된 데이터를 JSON으로 반환
             return jsonify({
                 'rank': rank,
                 'category': category,
@@ -729,7 +768,6 @@ def fetch():
             })
 
         else:
-            # 순위가 없을 경우
             return jsonify({'error': '순위가 110순위권 밖입니다.'}), 404
 
     except Exception as e:
@@ -737,8 +775,8 @@ def fetch():
         return jsonify({'error': 'Database error occurred.'}), 500
 
     finally:
-        # 데이터베이스 연결 종료
         conn.close()
+
 
 # 메인 페이지 렌더링
 @app.route('/')
@@ -765,6 +803,7 @@ def get_rank():
 
     if rank is not None:
         return jsonify({
+            'place_name': place_name,  # place_name 결과에 포함
             'rank': rank,
             'category': category,
             'blog_review': blog_review,

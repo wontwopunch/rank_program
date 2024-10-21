@@ -64,14 +64,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/search">실시간 체크</a>
                     </li>
-                    <!-- 관리자일 경우에만 영업자 관리 링크 표시 -->
                     {% if is_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="/manager_management">영업자 관리</a>
                     </li>
                     {% endif %}
                 </ul>
-                <!-- 로그아웃 버튼 추가 -->
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <form action="/logout" method="POST">
@@ -148,15 +146,9 @@
         .then(data => {
             const resultDiv = document.getElementById('resultMessage');
             if (data.rank) {
-                resultDiv.innerHTML = `
-                    '${placeName}'의 '${keyword}' 검색 시 순위는 ${data.rank} 입니다.<br>
-                    카테고리: ${data.category}<br>
-                    블로그 리뷰: ${data.blog_review}개<br>
-                    방문자 리뷰: ${data.visitor_review}개`;
+                resultDiv.innerHTML = `'<strong>${placeName}</strong>'의 '<strong>${keyword}</strong>' 검색 시 순위는 <strong>${data.rank}</strong>입니다.`;
             } else {
-                resultDiv.innerHTML = `
-                    '${placeName}'의 '${keyword}' 검색 시 순위는 110순위권 밖입니다.<br>
-                    카테고리, 블로그 리뷰, 방문자 리뷰는 조회되지 않습니다.`;
+                resultDiv.innerHTML = `'<strong>${placeName}</strong>'의 '<strong>${keyword}</strong>' 검색 시 순위는 110순위권 밖입니다.`;
             }
         })
         .catch(error => {
