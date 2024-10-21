@@ -25,6 +25,7 @@ import pandas as pd  # 데이터 처리 (주로 DataFrame 사용)
 import os  # 운영 체제와의 상호작용 (파일 경로 등)
 from datetime import timedelta
 from urllib.parse import urlparse
+from time import sleep
 
 app = Flask(__name__)
 app.secret_key = 'your_unique_secret_key'  # 고유한 비밀 키 설정
@@ -311,12 +312,20 @@ def fetch_data_from_db():
 # 글로벌 드라이버 변수
 driver = None
 
+
 def setup_driver():
     global driver
     if driver is None:  # 드라이버가 없을 때만 생성
         options = Options()
         options.add_argument('--ignore-certificate-errors')  # 추가적인 옵션
-        driver = webdriver.Edge(EdgeChromiumDriverManager().install(), options=options)  # WebDriverManager 사용
+        options.add_argument('--headless')  # 창을 열지 않는 headless 모드 추가
+        options.add_argument('--disable-gpu')  # GPU 비활성화 (윈도우의 경우 headless 모드에서 권장)
+
+        # Service 객체를 명시적으로 생성하여 전달
+        service = Service(EdgeChromiumDriverManager().install())
+
+        # WebDriver에 service와 options를 모두 전달
+        driver = webdriver.Edge(service=service, options=options)
     return driver
 
 
@@ -328,6 +337,7 @@ def close_driver():
 
 
 # 순위 찾기 함수
+# 순위 찾기 함수 개선 (WebDriverWait 추가)
 # 순위 찾기 함수 개선 (WebDriverWait 추가)
 def find_rank(index, keyword, place_id):
     global driver  # 드라이버 변수를 글로벌로 선언
@@ -346,7 +356,7 @@ def find_rank(index, keyword, place_id):
         # 리스트에서 더보기 없이 순위를 찾는 경우
         no_more_button_selector = "#loc-main-section-root > div > div.rdX0R > ul > li"
         try:
-            list_items = WebDriverWait(driver, 10).until(
+            list_items = WebDriverWait(driver, 20).until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, no_more_button_selector))
             )
             # print(f"더보기 없이 리스트에서 {place_id_str}를 찾습니다.")
@@ -370,14 +380,15 @@ def find_rank(index, keyword, place_id):
             # print("스크롤을 400px 내렸습니다.")
 
             # WebDriverWait 사용하여 더보기 버튼 대기
-            more_button = WebDriverWait(driver, 10).until(
+            more_button = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "a.YORrF span.Jtn42"))
             )
             more_button.click()  # 더보기 버튼 클릭
+            sleep(5)
             # print("첫 번째 더보기 버튼 클릭됨.")
 
             # 리스트에서 순위 확인
-            list_items = WebDriverWait(driver, 10).until(
+            list_items = WebDriverWait(driver, 20).until(
                 EC.presence_of_all_elements_located(
                     (By.CSS_SELECTOR, "#place-main-section-root > div.place_section.Owktn > div.rdX0R.POx9H > ul > li"))
             )
@@ -397,13 +408,14 @@ def find_rank(index, keyword, place_id):
 
         # 두 번째 더보기 버튼 클릭 후 순위를 찾는 경우
         try:
-            more_button = WebDriverWait(driver, 10).until(
+            more_button = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "a.cf8PL"))
             )
             more_button.click()
+            sleep(5)
             # print("두 번째 더보기 버튼 클릭됨.")
 
-            list_items = WebDriverWait(driver, 10).until(
+            list_items = WebDriverWait(driver, 20).until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR,
                                                      "#_list_scroll_container > div > div > div.place_business_list_wrapper > ul > li"))
             )
