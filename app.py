@@ -352,6 +352,8 @@ def find_rank(index, keyword, place_id):
         service = Service(executable_path=edge_driver_path)
         options = Options()
         options.add_argument('--ignore-certificate-errors')
+        options.add_argument('--headless')  # 창을 열지 않는 headless 모드 추가
+        options.add_argument('--disable-gpu')  # GPU 비활성화 (윈도우의 경우 headless 모드에서 권장)
         driver = webdriver.Edge(service=service, options=options)
 
     try:
