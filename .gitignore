@@ -2,3 +2,4 @@ Dump20241010.sql
 pw_test.py
 visionprank3.pem
 sql/create_keywords_table.sql
+.env

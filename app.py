@@ -26,21 +26,27 @@ import os  # 운영 체제와의 상호작용 (파일 경로 등)
 from datetime import timedelta
 from urllib.parse import urlparse
 from time import sleep
+from dotenv import load_dotenv
+
 
 app = Flask(__name__)
-app.secret_key = 'your_unique_secret_key'  # 고유한 비밀 키 설정
+# .env 파일에서 secret_key를 가져오기
+app.secret_key = os.getenv('SECRET_KEY')
 
 # Bcrypt 인스턴스 생성
 bcrypt = Bcrypt(app)
 
 edge_driver_path = 'webdriver/msedgedriver.exe'
 
+# .env 파일의 내용을 불러오기
+load_dotenv()
+
 # MySQL 연결 설정
 db_config = {
-    'user': 'root',
-    'password': '1234',
-    'host': 'localhost',
-    'database': 'your_database_name'
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'host': os.getenv('DB_HOST'),
+    'database': os.getenv('DB_NAME')
 }
 
 # 로그인 관리 설정
@@ -1097,4 +1103,4 @@ def delete_keyword():
 
 if __name__ == '__main__':
     test_db_connection()  # MySQL 연결 확인
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
